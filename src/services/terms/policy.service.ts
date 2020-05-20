@@ -1,27 +1,24 @@
-import { Terms } from '@upradata/tilda-tools';
-import { createList } from './list.client';
+import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
 //  not obliged because of the global typing. But vscode needs to have the file open to not highlight an error :(
 import { MT } from '../../typings/mt';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../loading-animation-popup.service';
-import { Api } from '../../utils';
-
+import { Api } from '../../utils/api';
+import { buildTerm } from './build-term';
 
 declare const mt: MT;
-declare function t668_init(s: string);
 
 export class PolicyOptions {
     api: Api;
     loadingAnimation?: Partial<LoadingAnimationPopupOptions>;
+    htmlCodeId: string;
 
     constructor(options: PolicyOptions) {
         this.api = new Api(options.api);
 
-        const loadingAnimation = Object.assign({
+        this.loadingAnimation = Object.assign({
             loadingMessage: `Loading "Privacy Policy". Be patient while the network is responding`,
             errorMessage: `An error occured. We could not load "Privacy Policy".`
         }, options.loadingAnimation, { autoShow: true, autoClose: true, });
-
-        this.loadingAnimation = new mt.LoadingAnimationPopupOptions(loadingAnimation);
     }
 }
 
@@ -38,7 +35,7 @@ export class Policy {
         this.loadingAnimation = new mt.LoadingAnimationPopup({ popup, ...this.options.loadingAnimation });
 
         const { api } = this.options;
-        const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:8080/${api.url}` : `${api.domain}/${api.url}`;
+        const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
 
         const ajaxSettings: JQuery.AjaxSettings = {
             crossDomain: true,
@@ -62,30 +59,18 @@ export class Policy {
     }
 
 
-    private onSuccess(terms: Terms, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
+    private onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
         try {
-            const termTitle = document.querySelector('#mt-term-title');
-            termTitle.textContent = terms.title;
+            const mtTermEl = buildTerm(term);
+            const htmlEl = document.querySelector(this.options.htmlCodeId);
 
-            createList(terms);
-            t668_init('106156990');
+            htmlEl.innerHTML = '';
+            htmlEl.appendChild(mtTermEl);
         } catch (e) {
+            this.loadingAnimation.onError();
             console.error(e);
         }
-        finally {
-            this.loadingAnimation.stopLoadingAnimation();
-        }
+
+        this.loadingAnimation.stopLoadingAnimation();
     }
 }
-
-
-new Policy({
-    api: {
-        url: 'api/legal/upradata-policy',
-        domain: 'https://server.upradata.com'
-    },
-    loadingAnimation: {
-        loadingMessage: `Loading the fully detailed digital.upradata.com "Privacy Policy". Be patient while the network is responding`,
-        errorMessage: `<p>An error occured. We could not load the digital.upradata.com "Privacy Policy" document. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to help us fix the issue and get the document requested.</p>`
-    }
-});

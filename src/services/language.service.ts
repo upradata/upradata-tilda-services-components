@@ -220,6 +220,7 @@ export class LanguageService {
             mobileAndDesktopLangLinks.forEach(a => a.classList.add(this.activeLinkClass));
         }
         catch (e) {
+            this.loadingAnimation.onError();
             console.error(e);
         }
         finally {

@@ -1,0 +1,6 @@
+dist*
+www
+loader
+node_modules
+bower_components
+lib

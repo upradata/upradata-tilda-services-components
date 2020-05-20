@@ -1,24 +1,23 @@
+import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../loading-animation-popup.service';
-import { Terms } from '@upradata/tilda-tools';
-import { createList } from './list.client';
-import { Api } from '../../utils';
-
-declare function t668_init(s: string);
+import { Api } from '../../utils/api';
+import { buildTerm } from './build-term';
 
 export type PopupMessage = (targetName: string) => string;
 
 export class TermsClientOptions {
     api: Api;
     navId: string;
-    loadingAnimation: Partial<LoadingAnimationPopupOptions>;
-    popupMessages: { loadingMessage: PopupMessage; errorMessage: PopupMessage; };
+    htmlCodeId: string;
+    loadingAnimation?: Partial<LoadingAnimationPopupOptions>;
+    popupMessages?: { loadingMessage: PopupMessage; errorMessage: PopupMessage; };
+    termsLinksSelector?: string = '.mt-term-link';
 
-    constructor(options: Partial<TermsClientOptions>) {
+    constructor(options: TermsClientOptions) {
         this.navId = options.navId;
         this.api = new Api(options.api);
 
-        const loadingAnimation = Object.assign({}, options.loadingAnimation, { autoShow: true, autoClose: true, });
-        this.loadingAnimation = new mt.LoadingAnimationPopupOptions(loadingAnimation);
+        this.loadingAnimation = Object.assign({}, options.loadingAnimation, { autoShow: true, autoClose: true, });
 
         this.popupMessages = Object.assign({
             loadingMessage: targetName => `Loading the "${targetName}" document. Be patient while the network is responding`,
@@ -34,12 +33,12 @@ export class TermsClient {
     private options: TermsClientOptions;
     private navButtons: HTMLAnchorElement[];
 
-    constructor(options: Partial<TermsClientOptions>) {
+    constructor(options: TermsClientOptions) {
         this.options = new TermsClientOptions(options);
 
         const { api } = this.options;
 
-        const domain = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:8080/${api.url}` : `${api.domain}/${api.url}`;
+        const domain = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
 
         const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
         this.loadingAnimation = new mt.LoadingAnimationPopup({ popup, ...this.options.loadingAnimation });
@@ -76,7 +75,7 @@ export class TermsClient {
     }
 
 
-    onSuccess(terms: Terms, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
+    onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
         try {
             const pageName = history.state.pageName;
             const button = this.navButtons.find(b => this.getHash(b.href) === pageName);
@@ -87,21 +86,18 @@ export class TermsClient {
 
             button.classList.add('t-active');
 
+            const mtTermEl = buildTerm(term);
+            const htmlEl = document.querySelector(this.options.htmlCodeId);
+            htmlEl.innerHTML = '';
+            htmlEl.appendChild(mtTermEl);
 
-            const termTitle = document.querySelector('#mt-term-title');
-            termTitle.textContent = terms.title;
-
-            createList(terms);
-            t668_init('106156990');
-
-            const aLinks: HTMLAnchorElement[] = Array.from(document.querySelectorAll('.mt-term-link'));
+            const aLinks: HTMLAnchorElement[] = Array.from(document.querySelectorAll(this.options.termsLinksSelector));
             this.addEventListenerToButtonsOrLinks(aLinks);
         } catch (e) {
             console.error(e);
         }
-        finally {
-            this.loadingAnimation.stopLoadingAnimation();
-        }
+
+        this.loadingAnimation.stopLoadingAnimation();
     }
 
 
