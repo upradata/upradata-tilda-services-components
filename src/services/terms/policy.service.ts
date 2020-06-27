@@ -1,4 +1,4 @@
-import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
+import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
 //  not obliged because of the global typing. But vscode needs to have the file open to not highlight an error :(
 import { MT } from '../../typings/mt';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../loading-animation-popup.service';
@@ -14,6 +14,7 @@ export class PolicyOptions {
 
     constructor(options: PolicyOptions) {
         this.api = new Api(options.api);
+        this.htmlCodeId = options.htmlCodeId;
 
         this.loadingAnimation = Object.assign({
             loadingMessage: `Loading "Privacy Policy". Be patient while the network is responding`,
@@ -42,7 +43,7 @@ export class Policy {
             url,
             method: 'GET',
             dataType: 'json',
-            success: this.onSuccess.bind(this),
+            success: (...args) => this.onSuccess.apply(this, args),
             error: this.onError.bind(this)
         };
 
@@ -59,13 +60,14 @@ export class Policy {
     }
 
 
-    private onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
+    private async onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
         try {
-            const mtTermEl = buildTerm(term);
+            const { termElement, init } = buildTerm(term);
             const htmlEl = document.querySelector(this.options.htmlCodeId);
 
             htmlEl.innerHTML = '';
-            htmlEl.appendChild(mtTermEl);
+            htmlEl.appendChild(termElement);
+            init();
         } catch (e) {
             this.loadingAnimation.onError();
             console.error(e);

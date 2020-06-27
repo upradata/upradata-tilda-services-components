@@ -1,4 +1,4 @@
-import { Selector, querySelectorByPath } from '@upradata/tilda-tools/lib/i18n/import-text/import-text.common';
+import { Selector, querySelectorByPath } from '@upradata/tilda-tools/lib/src/i18n/import-text/import-text.common';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from './loading-animation-popup.service';
 import { Api } from '../utils/api';
 import { MT } from '../typings/mt';
@@ -21,7 +21,7 @@ export class LanguageServiceOptions {
     defaultLanguage: string;
     languages: { lang: string; name: string; }[];
     loadingAnimation?: Partial<LoadingAnimationPopupOptions>;
-
+    activeLinkClass?: string = 'mt-lang-link-active';
 
     constructor(options: LanguageServiceOptions) {
         Object.assign(this, options);
@@ -30,13 +30,11 @@ export class LanguageServiceOptions {
 }
 
 
-
 export class LanguageService {
     public options: LanguageServiceOptions;
     private langLinksDesktop: NodeListOf<Element>;
     private langLinksMobile: NodeListOf<Element>;
     private ajaxSettings: JQuery.AjaxSettings;
-    private activeLinkClass: string = 'mt-lang-link-active';
     private langLinks: Element[];
     private loadingAnimation: LoadingAnimationPopup;
     private domain: string;
@@ -61,7 +59,7 @@ export class LanguageService {
         const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
         this.loadingAnimation = new mt.LoadingAnimationPopup({ popup, autoShow: true, autoClose: true });
 
-        this.domain = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:8080/${api.url}` : `${api.domain}/${api.url}`;
+        this.domain = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
 
         this.options.defaultLanguage = defaultLanguage || this.langLinks[ 0 ].textContent.toLowerCase();
 
@@ -89,7 +87,7 @@ export class LanguageService {
             const lang = a.textContent.trim().toLowerCase();
 
             if (activeLang === lang)
-                a.classList.add(this.activeLinkClass);
+                a.classList.add(this.options.activeLinkClass);
 
             a.addEventListener('click', e => {
                 e.preventDefault();
@@ -122,54 +120,60 @@ export class LanguageService {
         if (savedLang && savedLang.lang === lang) // already translated
             return;
 
+        this.loadPage(lang);
+    }
+
+
+    private loadPage(lang: string) {
         try {
+
+            const { languages, defaultLanguage, includedPages, excludedPages } = this.options;
+
             this.loadingLang = lang;
-            this.loadPage(lang);
+
+            const foundLang = languages.find(l => l.lang === lang);
+            const language = foundLang ? foundLang.name : lang;
+
+            this.loadingAnimation.loadingMessage = `Loading "${language}" translation. Be patient while the network is responding`;
+            // tslint:disable-next-line:max-line-length
+            this.loadingAnimation.errorMessage = `<p>An error occured. We could not load the "${language}" translation of the website. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to help us fix the issue.</p>`;
+
+            // reload the page (having the default language).
+            // No need to catch the text from the AppEngine service and populate the page
+            if (lang === defaultLanguage) {
+                this.loadingAnimation.startLoadingAnimation({ delay: 500 }).then(() => {
+                    localStorage.setItem('language', lang);
+                    window.location.href = location.origin + location.pathname;
+                });
+            } else {
+
+                const pageName = window.location.pathname.slice(1) || 'home'; // remove the head / (for pathname ==='' => 'home')
+
+                if (includedPages.length > 0 && includedPages.indexOf(pageName) === -1) // we translate only the allowed pages
+                    return;
+
+                if (excludedPages.length > 0 && excludedPages.indexOf(pageName) !== -1) // we do not translate excluded pages
+                    return;
+
+                if (pageName.endsWith('.html')) {
+                    const nameMatch = pageName.match(/-(.*)\.html/);
+                    const name = nameMatch ? nameMatch[ 1 ] : pageName.match(/(.*)\.html/)[ 1 ];
+
+                    this.ajaxSettings.url = `${this.domain}${pageName}?page=${name}&lang=${lang}`;
+                } else
+                    this.ajaxSettings.url = `${this.domain}${pageName}-${lang}`;
+
+
+                this.loadingAnimation.startLoadingAnimation({ delay: 500 });
+
+                $.ajax(this.ajaxSettings);
+            }
         } catch (e) {
             console.error(e);
             // https://michalzalecki.com/why-using-localStorage-directly-is-a-bad-idea/
             // But for us it is ok. No dramatic if translation not working
         }
     }
-
-
-
-    private loadPage(lang: string) {
-        const { languages, defaultLanguage, includedPages, excludedPages } = this.options;
-
-        const foundLang = languages.find(l => l.lang === lang);
-        const language = foundLang ? foundLang.name : lang;
-
-        this.loadingAnimation.loadingMessage = `Loading "${language}" translation. Be patient while the network is responding`;
-        // tslint:disable-next-line:max-line-length
-        this.loadingAnimation.errorMessage = `<p>An error occured. We could not load the "${language}" translation of the website. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to help us fix the issue.</p>`;
-
-        // reload the page (having the default language).
-        // No need to catch the text from the AppEngine service and populate the page
-        if (lang === defaultLanguage) {
-            this.loadingAnimation.startLoadingAnimation({ delay: 500 }).then(() => {
-                localStorage.setItem('language', lang);
-                window.location.href = location.origin + location.pathname;
-            });
-        } else {
-
-            const pageName = window.location.pathname.slice(1) || 'home'; // remove the head / (for pathname ==='' => 'home')
-
-            if (includedPages.length > 0 && includedPages.indexOf(pageName) === -1) // we translate only the allowed pages
-                return;
-
-            if (excludedPages.length > 0 && excludedPages.indexOf(pageName) !== -1) // we do not translate excluded pages
-                return;
-
-            this.ajaxSettings.url = this.domain + pageName + '-' + lang;
-
-            this.loadingAnimation.startLoadingAnimation({ delay: 500 });
-
-            $.ajax(this.ajaxSettings);
-        }
-    }
-
-
 
     private updateText(el: Node, newText: string) {
         const oldText = el.textContent;
@@ -197,37 +201,39 @@ export class LanguageService {
                 try {
                     const el = querySelectorByPath(row);
 
-                    if (el !== null) { // to be sure
+                    if (el) {
                         if (row.extra)
                             rowsWithExtraField.push(row);
 
                         this.updateText(el, row.text);
 
                     } else
-                        console.error('Could not find:', row);
+                        console.warn('Could not find:', row);
 
                 } catch (e) {
-                    console.error(e);
+                    console.warn(e);
                 }
             }
 
+
             this.handleExtra(rowsWithExtraField);
 
-            const mobileAndDesktopActiveLinks = [ ...document.querySelectorAll(`.${this.activeLinkClass}`) ];
-            mobileAndDesktopActiveLinks.forEach(a => a.classList.remove(this.activeLinkClass));
+            const { activeLinkClass } = this.options;
+
+            const mobileAndDesktopActiveLinks = [ ...document.querySelectorAll(`.${activeLinkClass}`) ];
+            mobileAndDesktopActiveLinks.forEach(a => a.classList.remove(activeLinkClass));
 
             const mobileAndDesktopLangLinks = this.langLinks.filter(a => a.textContent.trim().toLowerCase() === this.loadingLang);
-            mobileAndDesktopLangLinks.forEach(a => a.classList.add(this.activeLinkClass));
+            mobileAndDesktopLangLinks.forEach(a => a.classList.add(activeLinkClass));
         }
         catch (e) {
             this.loadingAnimation.onError();
             console.error(e);
         }
-        finally {
-            this.loadingAnimation.stopLoadingAnimation();
-            localStorage.setItem('language', this.loadingLang);
-            this.loadingLang = undefined;
-        }
+
+        this.loadingAnimation.stopLoadingAnimation();
+        localStorage.setItem('language', this.loadingLang);
+        this.loadingLang = undefined;
     }
 
     private handleExtra(rowsWithExtraField: TextData[]) {
@@ -258,6 +264,18 @@ export class LanguageService {
 
         // we reconstruct the "phrase"
         for (const [ id, nodes ] of Object.entries(nodesById)) {
+            let count = 0;
+
+            if (nodes.some(node => ++count && node === undefined)) {
+                console.warn(`Could not reconstruct i18n phrase with id: ${id}. At least one extra item returns undefined from querySelectorByPath`);
+                continue;
+            }
+
+            if (count !== nodes.length) {
+                console.warn(`Could not reconstruct i18n phrase with id: ${id}. It is missing positioned item(s).
+                There are ${count} positioned items for a maximum positioned item of ${nodes.length}`);
+                continue;
+            }
 
             const ancestor = this.commonAncestor(nodes);
             const clones = [];

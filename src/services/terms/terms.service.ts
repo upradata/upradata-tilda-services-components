@@ -1,11 +1,11 @@
-import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
+import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../loading-animation-popup.service';
 import { Api } from '../../utils/api';
 import { buildTerm } from './build-term';
 
 export type PopupMessage = (targetName: string) => string;
 
-export class TermsClientOptions {
+export class TermsOptions {
     api: Api;
     navId: string;
     htmlCodeId: string;
@@ -13,28 +13,28 @@ export class TermsClientOptions {
     popupMessages?: { loadingMessage: PopupMessage; errorMessage: PopupMessage; };
     termsLinksSelector?: string = '.mt-term-link';
 
-    constructor(options: TermsClientOptions) {
-        this.navId = options.navId;
+    constructor(options: TermsOptions) {
+        Object.assign(this, options);
         this.api = new Api(options.api);
 
         this.loadingAnimation = Object.assign({}, options.loadingAnimation, { autoShow: true, autoClose: true, });
 
         this.popupMessages = Object.assign({
-            loadingMessage: targetName => `Loading the "${targetName}" document. Be patient while the network is responding`,
-            errorMessage: targetName => `An error occured. We could not load the "${targetName}" document.`
+            loadingMessage: (targetName: string) => `Loading the "${targetName}" document. Be patient while the network is responding`,
+            errorMessage: (targetName: string) => `An error occured. We could not load the "${targetName}" document.`
         }, options.popupMessages);
     }
 }
 
 
-export class TermsClient {
+export class Terms {
     private ajaxSettings: JQuery.AjaxSettings;
     private loadingAnimation: LoadingAnimationPopup;
-    private options: TermsClientOptions;
+    private options: TermsOptions;
     private navButtons: HTMLAnchorElement[];
 
-    constructor(options: TermsClientOptions) {
-        this.options = new TermsClientOptions(options);
+    constructor(options: TermsOptions) {
+        this.options = new TermsOptions(options);
 
         const { api } = this.options;
 
@@ -49,7 +49,7 @@ export class TermsClient {
             url: domain,
             method: 'GET',
             dataType: 'json',
-            success: this.onSuccess.bind(this),
+            success: (...args) => this.onSuccess.apply(this, args), // jQuery not working with async function
             error: this.onError.bind(this)
         };
 
@@ -68,14 +68,12 @@ export class TermsClient {
 
     }
 
-
-    onError(jqXHR: JQuery.jqXHR, textStatus: JQuery.Ajax.ErrorTextStatus, errorThrown: string) {
+    private onError(jqXHR: JQuery.jqXHR, textStatus: JQuery.Ajax.ErrorTextStatus, errorThrown: string) {
         this.loadingAnimation.onError();
         console.error('Error occured: ', { jqXHR, textStatus, errorThrown });
     }
 
-
-    onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
+    private onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
         try {
             const pageName = history.state.pageName;
             const button = this.navButtons.find(b => this.getHash(b.href) === pageName);
@@ -86,13 +84,14 @@ export class TermsClient {
 
             button.classList.add('t-active');
 
-            const mtTermEl = buildTerm(term);
+            const { termElement, init } = buildTerm(term);
             const htmlEl = document.querySelector(this.options.htmlCodeId);
             htmlEl.innerHTML = '';
-            htmlEl.appendChild(mtTermEl);
+            // this will create the stencil custom element, loading the class if it was the first one created
+            // (and calling the constructor). We can call the methods from the prototype now
+            htmlEl.appendChild(termElement);
 
-            const aLinks: HTMLAnchorElement[] = Array.from(document.querySelectorAll(this.options.termsLinksSelector));
-            this.addEventListenerToButtonsOrLinks(aLinks);
+            init().then(() => this.observeNewLinks());
         } catch (e) {
             console.error(e);
         }
@@ -100,15 +99,39 @@ export class TermsClient {
         this.loadingAnimation.stopLoadingAnimation();
     }
 
+    private observeNewLinks() {
+        const htmlEl = document.querySelector(this.options.htmlCodeId);
 
+        const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    const aLinks = new Set<HTMLAnchorElement>();
 
-    getHash(url: string | Location) {
+                    [ ...htmlEl.querySelectorAll('a') ].filter(link => {
+                        const url = new URL(link.href);
+                        return url.hash !== '' && url.hostname === location.hostname && url.pathname && location.pathname;
+                    }).forEach(e => aLinks.add(e));
+
+                    Array.from<HTMLAnchorElement>(htmlEl.querySelectorAll(this.options.termsLinksSelector)).forEach(e => aLinks.add(e));
+
+                    const linksToBeAdded = [ ...aLinks ].filter(e => !e.classList.contains('mt-link-added')).map(e => { e.classList.add('mt-link-added'); return e; });
+
+                    this.addEventListenerToButtonsOrLinks(linksToBeAdded);
+                }
+            }
+        });
+
+        // Start observing the target node for configured mutations
+        observer.observe(htmlEl, { childList: true, subtree: true });
+    }
+
+    private getHash(url: string | Location) {
         const urlO = typeof url === 'string' ? new URL(url) : url;
         return urlO.hash.slice(1); // remove #
     }
 
 
-    handleHashChange() {
+    private handleHashChange() {
         let targetName = this.getHash(location); // || getHash(navButtons[0].href);
 
         if (!targetName) { // can happen if arrow back in history and we come back to /terms
@@ -128,12 +151,12 @@ export class TermsClient {
         $.ajax(ajaxSettings);
     }
 
-    changeHistoryState(pageName: string, mode: 'replaceState' | 'pushState') {
+    private changeHistoryState(pageName: string, mode: 'replaceState' | 'pushState') {
         history[ mode ]({ pageName }, pageName, `${location.pathname}#${pageName}`);
     }
 
 
-    addEventListenerToButtonsOrLinks(elements: HTMLAnchorElement[]) {
+    private addEventListenerToButtonsOrLinks(elements: HTMLAnchorElement[]) {
 
         for (const element of elements) {
             // it can be a button or a link not in the menu but in the text

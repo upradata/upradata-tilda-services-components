@@ -1,4 +1,4 @@
-import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
+import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../loading-animation-popup.service';
 import { Api } from '../../utils/api';
 import { Popup } from '../../components/popup.component';
@@ -17,7 +17,7 @@ export class PolicyShortOptions {
         this.loadingAnimation = Object.assign({
             loadingMessage: `Loading "Privacy Policy". Be patient while the network is responding`,
             errorMessage: `An error occured. We could not load "Privacy Policy".`
-        }, options.loadingAnimation, { autoShow: true, autoClose: true, });
+        }, options.loadingAnimation, { autoShow: true, autoClose: false, });
     }
 }
 
@@ -42,8 +42,8 @@ export class PolicyShort {
             crossDomain: true,
             url,
             method: 'GET',
-            dataType: 'html',
-            success: this.onSuccess.bind(this),
+            dataType: 'json',
+            success: (...args) => this.onSuccess.apply(this, args),
             error: this.onError.bind(this)
         };
 
@@ -55,9 +55,7 @@ export class PolicyShort {
                 this.popup.showPopup();
 
                 if (!this.mtTildaTermEl) {
-                    // loadingAnimation.startLoadingAnimation({ delay: 500 }).then(() => popup.showPopup());
                     this.loadingAnimation.startLoadingAnimation({ delay: 500 });
-
                     $.ajax(ajaxSettings);
                 } else
                     this.popup.append(this.mtTildaTermEl);
@@ -72,13 +70,15 @@ export class PolicyShort {
     }
 
 
-    private onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
+    private async onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
         try {
-            this.mtTildaTermEl = buildTerm(term);
+            const { termElement, init } = buildTerm(term);
+            this.mtTildaTermEl = termElement;
             this.mtTildaTermEl.classList.add('mt-short-policy-loaded');
 
             this.popup.clear();
             this.popup.append(this.mtTildaTermEl);
+            init();
         } catch (e) {
             this.loadingAnimation.onError();
             console.error(e);

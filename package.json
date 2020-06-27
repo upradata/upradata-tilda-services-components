@@ -13,6 +13,7 @@
 		"prebuild": "npm run clean",
 		"build": "tsc && tsc -m es6 --outDir lib-esm && build-bin.sh",
 		"postbuild": "npm run test && npm run e2e",
+		"watch": "concurrently 'tsc -w' 'tsc -w -m es6 --outDir lib-esm'",
 		"build:only": "npm run prebuild && tsc && tsc -m es6 --outDir lib-esm",
 		"build:watch": "npm run tsc -w",
 		"github-push": "npm run build && npm version patch && git push && git push --tags",
@@ -37,8 +38,9 @@
 			"@upradata/util": "link:/home/milottit/Libraries/Util/util@1.0.24",
 			"@upradata/puppeteer": "link:/home/milottit/Libraries/Util/puppeteer@1.0.0",
 			"@upradata/gulp": "link:/home/milottit/Libraries/Gulp@1.0.24",
-			"@upradata/stencil-components": "link:/home/milottit/Libraries/Tilda/stencil-components@1.0.1",
-			"@upradata/tilda-tools": "link:/home/milottit/Libraries/Tilda/tools@1.0.0"
+			"@upradata/stencil-components": "link:/home/milottit/Libraries/Tilda/stencil-components@1.0.2",
+			"@upradata/tilda-tools": "link:/home/milottit/Libraries/Tilda/tools@1.0.0",
+			"@upradata/browser-util": "link:/home/milottit/Libraries/Util/browser-util@1.0.21"
 		}
 	}
 }

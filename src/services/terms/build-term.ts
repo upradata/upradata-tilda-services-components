@@ -1,13 +1,7 @@
-import { Term, Type, SubSection, Section, Alinea, Text as TextItem, Tag, Footer } from '@upradata/tilda-tools/lib/terms/terms.types';
+import { Term, Type, SubSection, Alinea, Text as TextItem, Tag, Footer } from '@upradata/tilda-tools/lib/src/terms/terms.types';
 import { Components as MtStencil } from '@upradata/stencil-components';
+import { Function0 } from '@upradata/util';
 
-
-function newSection(section: Section): HTMLMtBlogSectionElement {
-    const sectionEl: HTMLMtBlogSectionElement = document.createElement('mt-blog-section');
-    sectionEl.content = section.title;
-
-    return sectionEl;
-}
 
 function newSubSection({ nb, title, description }: SubSection): HTMLMtBlogSubsectionElement {
     const subsectionEl: HTMLMtBlogSubsectionElement = document.createElement('mt-blog-subsection');
@@ -39,7 +33,7 @@ function newText({ text }: TextItem) {
 }
 
 function newTag({ tagName, text }: Tag) {
-    const div = document.createElement('div');
+    const div = document.createElement('div'); // I decided to let the tag inside the text
     div.innerHTML = text;
     div.classList.add('mt-tag', 'mt-blog-p');
 
@@ -57,40 +51,59 @@ function newFooter({ html }: Footer) {
 }
 
 
-export function buildTerm(term: Term): HTMLMtTildaTermElement {
+export function buildTerm(term: Term): { termElement: HTMLMtTildaTermElement; init: Function0<Promise<void>>; } {
     const mtTermEl = document.createElement('mt-tilda-term');
 
-    mtTermEl.header = term.header;
-    mtTermEl.intro = term.intro;
+    const init = async () => {
+        await Promise.all([
+            'mt-tilda-term',
+            'mt-tilda-accordeon-item',
+            'mt-blog-subsection',
+            'mt-blog-alinea',
+        ].map(tag => customElements.whenDefined(tag)));
 
-    let item: MtStencil.MtTildaAccordeonItem = undefined;
-    const createItem = (): MtStencil.MtTildaAccordeonItem => { const item = { header: '', content: '' }; mtTermEl.addItem(item); return item; };
+        mtTermEl.header = term.header;
+        mtTermEl.intro = term.intro;
 
 
-    for (const section of term.sections) {
-        item = createItem();
-        item.header = section.title;
+        const createItem = (header: string) => {
+            const accordeonItem = document.createElement('mt-tilda-accordeon-item');
+            accordeonItem.header = header;
+            accordeonItem.slot = 'item';
 
-        for (const el of section.items) {
-            if (el.type === Type.subSection) {
-                item.content += newSubSection(el).outerHTML;
-            } else if (el.type === Type.alinea) {
-                item.content += newAlinea(el).outerHTML;
+            return {
+                header: '',
+                content: '',
+                addContent: (el: HTMLElement) => accordeonItem.appendChild(el),
+                updateAccordeon: () => mtTermEl.appendChild(accordeonItem)
+            };
+        };
+
+        // we cannot do it dynamically because we use innerHTML and the custom element will not be created and rendered
+        // const addItem = (item: MtStencil.MtTildaAccordeonItem) => mtTermEl.addItem(item);
+
+        for (const section of term.sections) {
+            const item = createItem(section.title);
+
+            for (const el of section.items) {
+                switch (el.type) {
+                    case Type.subSection: item.addContent(newSubSection(el)); break;
+                    case Type.alinea: item.addContent(newAlinea(el)); break;
+                    case Type.tag: item.addContent(newTag(el)); break;
+                    case Type.text: item.addContent(newText(el)); break;
+                    case Type.footer: item.addContent(newFooter(el)); break;
+                    default: console.warn(`buildTerm received an unknown type: "${el.type}"`);
+                }
             }
-            else if (el.type === Type.tag) {
-                item.content += newTag(el).outerHTML;
-            }
-            else if (el.type === Type.text) {
-                item.content += newText(el).outerHTML;
-            }
-            else if (el.type === Type.footer) {
-                item.content += newFooter(el).outerHTML;
-            } else {
-                console.warn(`buildTerm received an unknown type: "${el.type}"`);
-            }
+
+            item.updateAccordeon();
         }
-    }
 
 
-    return mtTermEl;
+        /*  return new Promise<void>((res) => {
+             setTimeout(() => mtTermEl.init(true).then(() => res()), 2000); // We have to wait stencil render => 1 tick + next tick
+         }); */
+    };
+
+    return { termElement: mtTermEl, init };
 }

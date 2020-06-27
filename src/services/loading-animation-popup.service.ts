@@ -1,4 +1,5 @@
 import { Popup } from '../components/popup.component';
+import { Function0 } from '@upradata/util';
 
 export class LoadingAnimationPopupOptions {
     popup: Popup = new Popup({ recid: Popup.globalPopupRecId });
@@ -19,8 +20,7 @@ export class LoadingAnimationPopup {
     public errorMessage: string;
     public popup: Popup;
     private p: HTMLParagraphElement;
-    private loadingTextIntervalId: number;
-    private startTimeoutId: number;
+    private stopAnimation: Function0<void> = () => { };
 
     constructor(options?: Partial<LoadingAnimationPopupOptions>) {
         this.options = new LoadingAnimationPopupOptions(options);
@@ -33,9 +33,6 @@ export class LoadingAnimationPopup {
 
         this.p = document.createElement('p');
         this.p.setAttribute('style', 'padding: 10%; text-align: center;');
-
-        this.loadingTextIntervalId = undefined;
-        this.startTimeoutId = undefined;
     }
 
     static replaceAt(s: string, index: number, replacement: string) {
@@ -47,8 +44,20 @@ export class LoadingAnimationPopup {
         const { loadingMessage, delay = 0, autoShow } = options;
 
         return new Promise((res, rej) => {
+            let startTimeoutId: number = undefined;
+            let loadingTextIntervalId: number = undefined;
 
-            this.startTimeoutId = window.setTimeout(() => {
+            this.stopAnimation = () => {
+                clearTimeout(startTimeoutId);
+                clearInterval(loadingTextIntervalId);
+                startTimeoutId = undefined;
+                loadingTextIntervalId = undefined;
+            };
+
+            startTimeoutId = window.setTimeout(() => {
+                if (!startTimeoutId)
+                    return;
+
                 const msg = loadingMessage || this.loadingMessage;
                 const loadingText = msg + '\xa0\xa0\xa0'; // \xa0 === &nbsp; non breakable space
 
@@ -61,7 +70,7 @@ export class LoadingAnimationPopup {
                 let i = 0;
                 const len = loadingText.length;
 
-                this.loadingTextIntervalId = window.setInterval(() => {
+                loadingTextIntervalId = window.setInterval(() => {
                     if (i === 3) {
                         p.textContent = loadingText;
                         i = 0;
@@ -81,10 +90,7 @@ export class LoadingAnimationPopup {
     }
 
     stopLoadingAnimation(options: { autoClose?: boolean; } = {}) {
-        if (this.loadingTextIntervalId)
-            clearInterval(this.loadingTextIntervalId);
-        if (this.startTimeoutId)
-            clearTimeout(this.startTimeoutId);
+        this.stopAnimation();
 
         // this.popup.clear();
         this.popup.remove(this.p);
