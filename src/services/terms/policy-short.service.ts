@@ -57,9 +57,12 @@ export class PolicyShort {
                 if (!this.mtTildaTermEl) {
                     this.loadingAnimation.startLoadingAnimation({ delay: 500 });
                     $.ajax(ajaxSettings);
-                } else
+                } else {
+                    // every time the popup is closed, mtTildaTermEl is removed from the popup content
+                    // so it is detached and we have to re-init it (init is calling tilda t688_init)
                     this.popup.append(this.mtTildaTermEl);
-
+                    this.mtTildaTermEl.init(true);
+                }
             });
         });
     }
@@ -73,12 +76,13 @@ export class PolicyShort {
     private async onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
         try {
             const { termElement, init } = buildTerm(term);
+
             this.mtTildaTermEl = termElement;
             this.mtTildaTermEl.classList.add('mt-short-policy-loaded');
 
             this.popup.clear();
             this.popup.append(this.mtTildaTermEl);
-            init();
+            init({ isPopup: true, noHeader: true }).then(() => termElement.init());
         } catch (e) {
             this.loadingAnimation.onError();
             console.error(e);

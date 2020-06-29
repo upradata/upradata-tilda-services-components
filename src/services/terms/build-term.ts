@@ -1,6 +1,5 @@
 import { Term, Type, SubSection, Alinea, Text as TextItem, Tag, Footer } from '@upradata/tilda-tools/lib/src/terms/terms.types';
-import { Components as MtStencil } from '@upradata/stencil-components';
-import { Function0 } from '@upradata/util';
+import { Components as MtStencil } from '@upradata/stencil-components'; // needed in any case for HTMLMtBlogSubsectionElement an company
 
 
 function newSubSection({ nb, title, description }: SubSection): HTMLMtBlogSubsectionElement {
@@ -50,11 +49,17 @@ function newFooter({ html }: Footer) {
     return div;
 }
 
+export class BuildTermOptions {
+    isPopup?: boolean = false;
+    noHeader?: boolean = false;
+}
 
-export function buildTerm(term: Term): { termElement: HTMLMtTildaTermElement; init: Function0<Promise<void>>; } {
+export function buildTerm(term: Term): { termElement: HTMLMtTildaTermElement; init: (options?: BuildTermOptions) => Promise<void>; } {
     const mtTermEl = document.createElement('mt-tilda-term');
 
-    const init = async () => {
+    const init = async (options?: BuildTermOptions) => {
+        const { isPopup, noHeader } = Object.assign(new BuildTermOptions(), options);
+
         await Promise.all([
             'mt-tilda-term',
             'mt-tilda-accordeon-item',
@@ -62,7 +67,8 @@ export function buildTerm(term: Term): { termElement: HTMLMtTildaTermElement; in
             'mt-blog-alinea',
         ].map(tag => customElements.whenDefined(tag)));
 
-        mtTermEl.header = term.header;
+        mtTermEl.popup = isPopup;
+        mtTermEl.header = noHeader ? undefined : term.header;
         mtTermEl.intro = term.intro;
 
 
@@ -91,14 +97,13 @@ export function buildTerm(term: Term): { termElement: HTMLMtTildaTermElement; in
                     case Type.alinea: item.addContent(newAlinea(el)); break;
                     case Type.tag: item.addContent(newTag(el)); break;
                     case Type.text: item.addContent(newText(el)); break;
-                    case Type.footer: item.addContent(newFooter(el)); break;
+                    case Type.footer: mtTermEl.appendChild(newFooter(el)); break;
                     default: console.warn(`buildTerm received an unknown type: "${el.type}"`);
                 }
             }
 
             item.updateAccordeon();
         }
-
 
         /*  return new Promise<void>((res) => {
              setTimeout(() => mtTermEl.init(true).then(() => res()), 2000); // We have to wait stencil render => 1 tick + next tick
