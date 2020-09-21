@@ -1,10 +1,11 @@
-import { Popup } from '../components/popup.component';
+// import { Popup } from './popup.service';
 import { Function0 } from '@upradata/util';
+import { services } from './all-services';
 
 export class LoadingAnimationPopupOptions {
-    popup: Popup = new Popup({ recid: Popup.globalPopupRecId });
-    loadingMessage: string = '';
-    errorMessage: string = '';
+    // popup: Popup; // = new Popup({ recid: Popup.globalPopupRecId });
+    loadingMessage: string = 'Loading. Be patient while the network is responding';
+    errorMessage: string = `<p>An error occured. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to get the information you wished and help us at the same time to fix the issue.</p>`;
     autoShow: boolean = false;
     autoClose: boolean = false;
 
@@ -18,19 +19,11 @@ export class LoadingAnimationPopup {
     public options: LoadingAnimationPopupOptions;
     public loadingMessage: string;
     public errorMessage: string;
-    public popup: Popup;
     private p: HTMLParagraphElement;
     private stopAnimation: Function0<void> = () => { };
 
     constructor(options?: Partial<LoadingAnimationPopupOptions>) {
         this.options = new LoadingAnimationPopupOptions(options);
-
-        this.popup = this.options.popup;
-
-        this.loadingMessage = this.options.loadingMessage || 'Loading. Be patient while the network is responding';
-        // tslint:disable-next-line: max-line-length
-        this.errorMessage = this.errorMessage || `<p>An error occured. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to get the information you wished and help us at the same time to fix the issue.</p>`;
-
         this.p = document.createElement('p');
         this.p.setAttribute('style', 'padding: 10%; text-align: center;');
     }
@@ -64,8 +57,8 @@ export class LoadingAnimationPopup {
                 const p = this.p;
                 p.textContent = loadingText;
 
-                // this.popup.clear();
-                this.popup.append(p);
+                // this.options.popup.clear();
+                services.popup.append(p);
 
                 let i = 0;
                 const len = loadingText.length;
@@ -82,7 +75,7 @@ export class LoadingAnimationPopup {
                 }, 500);
 
                 if (autoShow || this.options.autoShow)
-                    this.popup.showPopup();
+                    services.popup.showPopup();
 
                 res();
             }, delay);
@@ -92,22 +85,22 @@ export class LoadingAnimationPopup {
     stopLoadingAnimation(options: { autoClose?: boolean; } = {}) {
         this.stopAnimation();
 
-        // this.popup.clear();
-        this.popup.remove(this.p);
+        // this.options.popup.clear();
+        services.popup.remove(this.p);
 
         if (options.autoClose || this.options.autoClose)
-            this.popup.closePopup();
+            services.popup.closePopup();
     }
 
     onError(errorMessage?: string) {
         this.stopLoadingAnimation();
-        this.popup.showPopup();
+        services.popup.showPopup();
 
         const errorDiv = document.createElement('div');
         errorDiv.innerHTML = errorMessage || this.errorMessage;
         errorDiv.setAttribute('style', 'padding: 10%; text-align: center;');
 
-        this.popup.append(errorDiv);
+        services.popup.append(errorDiv);
     }
 
 }

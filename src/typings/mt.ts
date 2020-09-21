@@ -1,4 +1,4 @@
-import { Popup, PopupOptions } from '../components/popup.component';
+import { Popup, PopupOptions } from '../services/popup.service';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../services';
 
 export interface MT {

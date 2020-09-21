@@ -1,11 +1,14 @@
 import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
 //  not obliged because of the global typing. But vscode needs to have the file open to not highlight an error :(
-import { MT } from '../../typings/mt';
-import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../loading-animation-popup.service';
+// import { MT } from '../../typings/mt';
+import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/loading-animation-popup.service';
 import { Api } from '../../utils/api';
 import { buildTerm } from './build-term';
+import { servicesPromise$ } from '@upradata/browser-util';
+import { MtModuleServices } from '../../services/all-services';
 
-declare const mt: MT;
+
+// declare const mt: MT;
 
 export class PolicyOptions {
     api: Api;
@@ -28,29 +31,32 @@ export class Policy {
     private loadingAnimation: LoadingAnimationPopup;
 
     constructor(options: PolicyOptions) {
-        this.options = new PolicyOptions(options);
+        servicesPromise$<MtModuleServices>().then(() => {
 
-        // const popup = document.querySelector('#rec108186637 .t-popup__container'); // popup on the client already
+            this.options = new PolicyOptions(options);
 
-        const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
-        this.loadingAnimation = new mt.LoadingAnimationPopup({ popup, ...this.options.loadingAnimation });
+            // const popup = document.querySelector('#rec108186637 .t-popup__container'); // popup on the client already
 
-        const { api } = this.options;
-        const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
+            // const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
+            this.loadingAnimation = new LoadingAnimationPopup(this.options.loadingAnimation);
 
-        const ajaxSettings: JQuery.AjaxSettings = {
-            crossDomain: true,
-            url,
-            method: 'GET',
-            dataType: 'json',
-            success: (...args) => this.onSuccess.apply(this, args),
-            error: this.onError.bind(this)
-        };
+            const { api } = this.options;
+            const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
+
+            const ajaxSettings: JQuery.AjaxSettings = {
+                crossDomain: true,
+                url,
+                method: 'GET',
+                dataType: 'json',
+                success: (...args) => this.onSuccess.apply(this, args),
+                error: this.onError.bind(this)
+            };
 
 
-        $(window).ready(() => {
-            this.loadingAnimation.startLoadingAnimation({ delay: 500 });
-            $.ajax(ajaxSettings);
+            $(window).ready(() => {
+                this.loadingAnimation.startLoadingAnimation({ delay: 500 });
+                $.ajax(ajaxSettings);
+            });
         });
     }
 

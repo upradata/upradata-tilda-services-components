@@ -4,31 +4,30 @@ declare function t868_resizePopup(recid: string): void;
 
 
 export class PopupOptions {
-    recid?: string = Popup.globalPopupRecId;
+    recid: string;
+    linkId: string;
 
-    constructor(options: PopupOptions = {}) {
+    constructor(options: PopupOptions) {
         Object.assign(this, options);
     }
 }
 
 export class Popup {
-    static globalPopupRecId: string;
-    static linkId: string;
     options: PopupOptions;
-    recid: string;
     rec: JQuery<HTMLElement>;
     popup: JQuery<HTMLElement>;
     popupContainer: JQuery<HTMLElement>;
     customCodeHTML: string; // Code inside Tilda Popup Block that can be inserted in the online editor
     isOpen: boolean = false;
 
-    constructor(options: Partial<PopupOptions> = {}) {
-        this.options = Object.assign(new PopupOptions(), options);
-        this.recid = this.options.recid;
-        this.rec = $('#rec' + this.options.recid);
-        this.popup = this.rec.find('.t-popup');
-        this.popupContainer = this.rec.find('.t-popup__container');
-        this.customCodeHTML = t868__readCustomCode(this.rec);
+    constructor(options: PopupOptions) {
+        this.options = new PopupOptions(options);
+        $(window).ready(() => {
+            this.rec = $(`#rec${this.options.recid}`);
+            this.popup = this.rec.find('.t-popup');
+            this.popupContainer = this.rec.find('.t-popup__container');
+            this.customCodeHTML = t868__readCustomCode(this.rec);
+        });
     }
 
     append(element: HTMLElement) {
@@ -55,7 +54,7 @@ export class Popup {
         this.popupContainer.append(this.customCodeHTML);
 
         this.popup.css('display', 'block');
-        t868_setHeight(this.recid);
+        t868_setHeight(this.options.recid);
         // setTimeout(function () {
         this.popup.find('.t-popup__container').addClass('t-popup__container-animated');
         this.popup.addClass('t-popup_show');
@@ -75,7 +74,7 @@ export class Popup {
             this.closePopup();
         });
 
-        t868_resizePopup(this.recid);
+        t868_resizePopup(this.options.recid);
 
         this.isOpen = true;
     }

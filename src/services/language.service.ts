@@ -1,9 +1,10 @@
 import { Selector, querySelectorByPath } from '@upradata/tilda-tools/lib/src/i18n/import-text/import-text.common';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from './loading-animation-popup.service';
 import { Api } from '../utils/api';
-import { MT } from '../typings/mt';
+// import { MT } from '../typings/mt';
+// import { Popup } from './popup.service';
 
-declare const mt: MT; // for build-scripts-streams to compile (apparently running ts programatically does not understand global ambiant declaration)
+// declare const mt: MT; // for build-scripts-streams to compile (apparently running ts programatically does not understand global ambiant declaration)
 
 export class TextData extends Selector {
     extra?: string;
@@ -22,6 +23,7 @@ export class LanguageServiceOptions {
     languages: { lang: string; name: string; }[];
     loadingAnimation?: Partial<LoadingAnimationPopupOptions>;
     activeLinkClass?: string = 'mt-lang-link-active';
+    // popup: Popup; // = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
 
     constructor(options: LanguageServiceOptions) {
         Object.assign(this, options);
@@ -56,8 +58,7 @@ export class LanguageService {
         };
 
 
-        const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
-        this.loadingAnimation = new mt.LoadingAnimationPopup({ popup, autoShow: true, autoClose: true });
+        this.loadingAnimation = new LoadingAnimationPopup({ autoShow: true, autoClose: true });
 
         this.domain = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
 

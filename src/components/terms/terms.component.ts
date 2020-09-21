@@ -1,7 +1,9 @@
 import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
-import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../loading-animation-popup.service';
+import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/loading-animation-popup.service';
 import { Api } from '../../utils/api';
 import { buildTerm } from './build-term';
+import { servicesPromise$ } from '@upradata/browser-util';
+import { MtModuleServices } from '../../services/all-services';
 
 export type PopupMessage = (targetName: string) => string;
 
@@ -34,38 +36,41 @@ export class Terms {
     private navButtons: HTMLAnchorElement[];
 
     constructor(options: TermsOptions) {
-        this.options = new TermsOptions(options);
+        servicesPromise$<MtModuleServices>().then(() => {
 
-        const { api } = this.options;
+            this.options = new TermsOptions(options);
 
-        const domain = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
+            const { api } = this.options;
 
-        const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
-        this.loadingAnimation = new mt.LoadingAnimationPopup({ popup, ...this.options.loadingAnimation });
+            const domain = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
 
-        this.ajaxSettings = {
-            // async: true,
-            crossDomain: true,
-            url: domain,
-            method: 'GET',
-            dataType: 'json',
-            success: (...args) => this.onSuccess.apply(this, args), // jQuery not working with async function
-            error: this.onError.bind(this)
-        };
+            // const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
+            this.loadingAnimation = new LoadingAnimationPopup(this.options.loadingAnimation);
 
-        window.addEventListener('popstate', event => this.handleHashChange());
+            this.ajaxSettings = {
+                // async: true,
+                crossDomain: true,
+                url: domain,
+                method: 'GET',
+                dataType: 'json',
+                success: (...args) => this.onSuccess.apply(this, args), // jQuery not working with async function
+                error: this.onError.bind(this)
+            };
+
+            window.addEventListener('popstate', event => this.handleHashChange());
 
 
-        $(window).ready(() => {
-            this.navButtons = Array.from(document.querySelectorAll(`${this.options.navId} .t-menu__link-item`));
-            this.addEventListenerToButtonsOrLinks(this.navButtons);
+            $(window).ready(() => {
+                this.navButtons = Array.from(document.querySelectorAll(`${this.options.navId} .t-menu__link-item`));
+                this.addEventListenerToButtonsOrLinks(this.navButtons);
 
-            if (!history.state || history.state.pageName === '')
-                this.changeHistoryState(this.getHash(this.navButtons[ 0 ].href), 'pushState');
+                if (!history.state || history.state.pageName === '')
+                    this.changeHistoryState(this.getHash(this.navButtons[ 0 ].href), 'pushState');
 
-            this.handleHashChange();
+                this.handleHashChange();
+            });
+
         });
-
     }
 
     private onError(jqXHR: JQuery.jqXHR, textStatus: JQuery.Ajax.ErrorTextStatus, errorThrown: string) {
