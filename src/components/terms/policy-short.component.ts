@@ -4,8 +4,7 @@ import { Api } from '../../utils/api';
 // import { Popup } from '../../services/popup.service';
 // import { MT } from '../../typings/mt';
 import { buildTerm } from './build-term';
-import { servicesPromise$ } from '@upradata/browser-util';
-import { MtModuleServices, services } from '../../services/all-services';
+import { services } from '../../services/all-services';
 
 
 // declare const mt: MT; // for build-scripts-streams to compile (apparently running ts programatically does not understand global ambiant declaration)
@@ -31,44 +30,41 @@ export class PolicyShort {
     private mtTildaTermEl: HTMLMtTildaTermElement = undefined;
 
     constructor(options: PolicyShortOptions) {
-        servicesPromise$<MtModuleServices>().then(() => {
+        this.options = new PolicyShortOptions(options);
 
-            this.options = new PolicyShortOptions(options);
+        // const popup = document.querySelector('#rec108186637 .t-popup__container'); // popup on the client already
 
-            // const popup = document.querySelector('#rec108186637 .t-popup__container'); // popup on the client already
+        // this.popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
+        this.loadingAnimation = new LoadingAnimationPopup(this.options.loadingAnimation);
 
-            // this.popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
-            this.loadingAnimation = new LoadingAnimationPopup(this.options.loadingAnimation);
+        const { api } = this.options;
+        const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
 
-            const { api } = this.options;
-            const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
+        const ajaxSettings: JQuery.AjaxSettings = {
+            crossDomain: true,
+            url,
+            method: 'GET',
+            dataType: 'json',
+            success: (...args) => this.onSuccess.apply(this, args),
+            error: this.onError.bind(this)
+        };
 
-            const ajaxSettings: JQuery.AjaxSettings = {
-                crossDomain: true,
-                url,
-                method: 'GET',
-                dataType: 'json',
-                success: (...args) => this.onSuccess.apply(this, args),
-                error: this.onError.bind(this)
-            };
+        $(window).ready(() => {
 
-            $(window).ready(() => {
+            const linkToPopup = document.querySelector(`[href="${/* mt.Popup */services.popup.options.linkId}"]`);
+            linkToPopup.addEventListener('click', e => {
+                e.preventDefault();
+                services.popup.showPopup();
 
-                const linkToPopup = document.querySelector(`[href="${/* mt.Popup */services.popup.options.linkId}"]`);
-                linkToPopup.addEventListener('click', e => {
-                    e.preventDefault();
-                    services.popup.showPopup();
-
-                    if (!this.mtTildaTermEl) {
-                        this.loadingAnimation.startLoadingAnimation({ delay: 500 });
-                        $.ajax(ajaxSettings);
-                    } else {
-                        // every time the popup is closed, mtTildaTermEl is removed from the popup content
-                        // so it is detached and we have to re-init it (init is calling tilda t688_init)
-                        services.popup.append(this.mtTildaTermEl);
-                        this.mtTildaTermEl.init(true);
-                    }
-                });
+                if (!this.mtTildaTermEl) {
+                    this.loadingAnimation.startLoadingAnimation({ delay: 500 });
+                    $.ajax(ajaxSettings);
+                } else {
+                    // every time the popup is closed, mtTildaTermEl is removed from the popup content
+                    // so it is detached and we have to re-init it (init is calling tilda t688_init)
+                    services.popup.append(this.mtTildaTermEl);
+                    this.mtTildaTermEl.init(true);
+                }
             });
         });
     }

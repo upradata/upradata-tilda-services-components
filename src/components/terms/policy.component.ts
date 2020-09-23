@@ -4,7 +4,6 @@ import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/loading-animation-popup.service';
 import { Api } from '../../utils/api';
 import { buildTerm } from './build-term';
-import { servicesPromise$ } from '@upradata/browser-util';
 import { MtModuleServices } from '../../services/all-services';
 
 
@@ -31,32 +30,29 @@ export class Policy {
     private loadingAnimation: LoadingAnimationPopup;
 
     constructor(options: PolicyOptions) {
-        servicesPromise$<MtModuleServices>().then(() => {
+        this.options = new PolicyOptions(options);
 
-            this.options = new PolicyOptions(options);
+        // const popup = document.querySelector('#rec108186637 .t-popup__container'); // popup on the client already
 
-            // const popup = document.querySelector('#rec108186637 .t-popup__container'); // popup on the client already
+        // const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
+        this.loadingAnimation = new LoadingAnimationPopup(this.options.loadingAnimation);
 
-            // const popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
-            this.loadingAnimation = new LoadingAnimationPopup(this.options.loadingAnimation);
+        const { api } = this.options;
+        const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
 
-            const { api } = this.options;
-            const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
-
-            const ajaxSettings: JQuery.AjaxSettings = {
-                crossDomain: true,
-                url,
-                method: 'GET',
-                dataType: 'json',
-                success: (...args) => this.onSuccess.apply(this, args),
-                error: this.onError.bind(this)
-            };
+        const ajaxSettings: JQuery.AjaxSettings = {
+            crossDomain: true,
+            url,
+            method: 'GET',
+            dataType: 'json',
+            success: (...args) => this.onSuccess.apply(this, args),
+            error: this.onError.bind(this)
+        };
 
 
-            $(window).ready(() => {
-                this.loadingAnimation.startLoadingAnimation({ delay: 500 });
-                $.ajax(ajaxSettings);
-            });
+        $(window).ready(() => {
+            this.loadingAnimation.startLoadingAnimation({ delay: 500 });
+            $.ajax(ajaxSettings);
         });
     }
 

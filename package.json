@@ -1,57 +1,64 @@
 {
-	"name": "@upradata/tilda-services-components",
-	"version": "1.0.0",
-	"main": "lib",
-	"types": "lib",
-	"files": [
+    "name": "@upradata/tilda-services-components",
+    "version": "1.1.0",
+    "main": "lib",
+    "types": "lib",
+    "files": [
         "lib",
-        "lib-esm"
-	],
-	"scripts": {
-		"test": "npx jest --verbose false --config jest-ut.config.js",
-		"e2e": "npx jest --passWithNoTests --verbose false --config jest-e2e.config.js",
-		"clean": "shx rm -rf lib lib-esm",
-		"prebuild": "npm run clean",
-		"build": "tsc && tsc -m es6 --outDir lib-esm && build-bin.sh",
-		"postbuild": "npm run test && npm run e2e",
-		"watch": "concurrently 'tsc -w' 'tsc -w -m es6 --outDir lib-esm'",
-		"build:only": "npm run prebuild && tsc && tsc -m es6 --outDir lib-esm",
-		"build:watch": "npm run tsc -w",
-		"github-push": "npm run build && npm version patch && git push && git push --tags",
-		"npm-publish": "npm run build && npm publish --access public"
-	},
-	"dependencies": {
-		"common-tags": "^1.8.0"
-	},
-	"devDependencies": {
-		"@babel/cli": "^7.10.4",
-		"@babel/core": "^7.10.4",
-		"@babel/plugin-transform-regenerator": "^7.10.4",
-		"@babel/plugin-transform-runtime": "^7.10.4",
-		"@babel/preset-env": "^7.10.4",
-		"@babel/runtime": "^7.10.4",
-		"@babel/runtime-corejs3": "^7.10.4",
-		"@types/common-tags": "^1.8.0",
-		"@types/jquery": "^3.3.35",
-		"@types/node": "^13.13.2",
-		"@types/through2": "^2.0.34",
-		"concurrently": "^5.3.0",
-		"core-js": "^3.6.5",
-		"regenerator-runtime": "^0.13.5",
-		"ts-node": "^8.5.4",
-		"tsconfig": "^7.0.0",
-		"tsconfig-paths": "^3.9.0",
-		"typescript": "^3.7.5"
-	},
-	"local": {
-		"dependencies": {
-			"@upradata/node-util": "link:/home/milottit/Libraries/Util/node-util@2.0.3",
-			"@upradata/util": "link:/home/milottit/Libraries/Util/util@1.0.24",
-			"@upradata/puppeteer": "link:/home/milottit/Libraries/Util/puppeteer@1.0.0",
-			"@upradata/gulp": "link:/home/milottit/Libraries/Gulp@1.0.24",
-			"@upradata/stencil-components": "link:/home/milottit/Libraries/Tilda/stencil-components@1.0.2",
-			"@upradata/tilda-tools": "link:/home/milottit/Libraries/Tilda/tools@1.0.0",
-			"@upradata/browser-util": "link:/home/milottit/Libraries/Util/browser-util@1.0.21"
-		}
-	}
+        "lib-esm",
+        "dist-bundle"
+    ],
+    "scripts": {
+        "test": "npx jest --verbose false --config jest-ut.config.js",
+        "e2e": "npx jest --passWithNoTests --verbose false --config jest-e2e.config.js",
+        "clean": "shx rm -rf lib lib-esm",
+        "prebuild": "npm run clean",
+        "build": "tsc && tsc -m es6 --outDir lib-esm && build-bin.sh",
+        "postbuild": "npm run test && npm run e2e",
+        "watch": "concurrently 'tsc -w' 'tsc -w -m es6 --outDir lib-esm'",
+        "build:only": "npm run prebuild && tsc && tsc -m es6 --outDir lib-esm",
+        "build:watch": "npm run tsc -w",
+        "github-push": "npm run build && npm version patch && git push && git push --tags",
+        "npm-publish": "npm run build && npm publish --access public"
+    },
+    "dependencies": {
+        "common-tags": "^1.8.0"
+    },
+    "devDependencies": {
+        "@babel/cli": "^7.11.6",
+        "@babel/core": "^7.11.6",
+        "@babel/plugin-external-helpers": "^7.10.4",
+        "@babel/plugin-transform-regenerator": "^7.10.4",
+        "@babel/plugin-transform-runtime": "^7.11.5",
+        "@babel/preset-env": "^7.11.5",
+        "@babel/runtime": "^7.10.4",
+        "@babel/runtime-corejs3": "^7.11.2",
+        "@types/common-tags": "^1.8.0",
+        "@types/jquery": "^3.3.35",
+        "@types/node": "^13.13.2",
+        "@types/through2": "^2.0.34",
+        "@types/webpack": "^4.41.22",
+        "babel-loader": "^8.1.0",
+        "concurrently": "^5.3.0",
+        "core-js": "^3.6.5",
+        "regenerator-runtime": "^0.13.5",
+        "ts-loader": "^8.0.4",
+        "ts-node": "^8.5.4",
+        "tsconfig": "^7.0.0",
+        "tsconfig-paths": "^3.9.0",
+        "typescript": "^3.7.5",
+        "webpack": "^4.44.2",
+        "webpack-cli": "^3.3.12"
+    },
+    "local": {
+        "dependencies": {
+            "@upradata/node-util": "link:/home/milottit/Libraries/Util/node-util@2.0.3",
+            "@upradata/util": "link:/home/milottit/Libraries/Util/util@1.0.24",
+            "@upradata/puppeteer": "link:/home/milottit/Libraries/Util/puppeteer@1.0.0",
+            "@upradata/gulp": "link:/home/milottit/Libraries/Gulp@1.0.24",
+            "@upradata/stencil-components": "link:/home/milottit/Libraries/Tilda/stencil-components@1.0.5",
+            "@upradata/tilda-tools": "link:/home/milottit/Libraries/Tilda/tools@1.0.0",
+            "@upradata/browser-util": "link:/home/milottit/Libraries/Util/browser-util@1.0.21"
+        }
+    }
 }
