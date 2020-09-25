@@ -4,7 +4,7 @@ import { Api } from '../../utils/api';
 // import { Popup } from '../../services/popup.service';
 // import { MT } from '../../typings/mt';
 import { buildTerm } from './build-term';
-import { services } from '../../services/all-services';
+import { services } from '../../services/services.module';
 
 
 // declare const mt: MT; // for build-scripts-streams to compile (apparently running ts programatically does not understand global ambiant declaration)

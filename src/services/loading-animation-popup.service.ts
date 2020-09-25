@@ -1,6 +1,6 @@
 // import { Popup } from './popup.service';
 import { Function0 } from '@upradata/util';
-import { services } from './all-services';
+import { services } from './services.module';
 
 export class LoadingAnimationPopupOptions {
     // popup: Popup; // = new Popup({ recid: Popup.globalPopupRecId });
