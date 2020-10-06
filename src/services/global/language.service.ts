@@ -1,6 +1,7 @@
 import { Selector, querySelectorByPath } from '@upradata/tilda-tools/lib/src/i18n/import-text/import-text.common';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from './loading-animation-popup.service';
-import { Api } from '../utils/api';
+import { Api } from '../../utils/api';
+import { isUndefined } from '@upradata/util/lib-esm';
 // import { MT } from '../typings/mt';
 // import { Popup } from './popup.service';
 
@@ -132,12 +133,15 @@ export class LanguageService {
 
             this.loadingLang = lang;
 
-            const foundLang = languages.find(l => l.lang === lang);
-            const language = foundLang ? foundLang.name : lang;
+            /* const foundLang = languages.find(l => l.lang === lang);
+            const language = foundLang ? foundLang.name : lang; */
+            const language = languages.find(l => l.lang === lang);
+            if (!language)
+                return;
 
-            this.loadingAnimation.loadingMessage = `Loading "${language}" translation. Be patient while the network is responding`;
+            this.loadingAnimation.loadingMessage = `Loading "${language.name}" translation. Be patient while the network is responding`;
             // tslint:disable-next-line:max-line-length
-            this.loadingAnimation.errorMessage = `<p>An error occured. We could not load the "${language}" translation of the website. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to help us fix the issue.</p>`;
+            this.loadingAnimation.errorMessage = `<p>An error occured. We could not load the "${language.name}" translation of the website. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to help us fix the issue.</p>`;
 
             // reload the page (having the default language).
             // No need to catch the text from the AppEngine service and populate the page

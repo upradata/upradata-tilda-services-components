@@ -26,6 +26,17 @@ export class Popup {
             this.rec = $(`#rec${this.options.recid}`);
             this.popup = this.rec.find('.t-popup');
             this.popupContainer = this.rec.find('.t-popup__container');
+
+            const css = `
+                <style>
+                    .mt-is-mobile .t-popup .t-popup__container {
+                        max-height: 95vh;
+                        margin-top: 0px;
+                    }
+                </style>`;
+
+            document.body.insertAdjacentHTML('afterbegin', css); // fix mobile css that is overflowing the window
+
             this.customCodeHTML = t868__readCustomCode(this.rec);
         });
     }

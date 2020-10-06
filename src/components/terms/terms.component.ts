@@ -1,5 +1,5 @@
 import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
-import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/loading-animation-popup.service';
+import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/global/loading-animation-popup.service';
 import { Api } from '../../utils/api';
 import { buildTerm } from './build-term';
 // import { MtModuleServices } from '../../services/all-services';

@@ -21,7 +21,8 @@ export default function webpackConfig(env: object, argv: webpack.Configuration) 
             }, */
             context: fromRoot(),
             entry: {
-                'mt-services': fromRoot('src/index.ts')
+                tilda: fromRoot('src/index.ts'),
+                'tilda-global': fromRoot('src/services/global/index.ts')
             },
             output: {
                 path: fromRoot('bundle', output, ecma),
@@ -114,4 +115,4 @@ export default function webpackConfig(env: object, argv: webpack.Configuration) 
     }
 
     return configs;
-};
+}

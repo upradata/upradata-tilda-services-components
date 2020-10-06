@@ -15,18 +15,18 @@ export const babelE5Config = {
         ]
     ],
     plugins: [
-        [
+        /* [
             '@babel/plugin-external-helpers',
             {
                 helperVersion: '^7.10.1'
             }
-        ],
+        ], */
         [
             '@babel/plugin-transform-runtime',
             {
                 absoluteRuntime: false,
                 corejs: 3,
-                helpers: false,
+                helpers: true,
                 regenerator: true,
                 useESModules: false,
                 version: '^7.10.1'

@@ -1,12 +1,12 @@
-import { ModulesServicesConfig, ModuleServicesConfig, ModulesServices, LoadServices, loadServices as load } from '@upradata/browser-util';
+import { LoadServices, loadServices as load } from '@upradata/browser-util';
 import { Service } from './types';
 import { LoadingAnimationPopup } from './loading-animation-popup.service';
 import { LanguageService } from './language.service';
 import { Popup } from './popup.service';
 import { loadScrollHashService } from './scroll-hash.service';
 import { loadIsMobileService } from './is-mobile.service';
-import { MtModuleServicesConfig, MtModuleServices, services } from './services.module';
-export * from './services.module';
+import { MtModuleServicesConfig, MtModuleServices, services, MtModulesServicesConfig } from './services.module';
+import { EVENTS } from './load-services.event';
 
 export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleServices, Service> = async servicesConfig => {
     loadIsMobileService();
@@ -20,30 +20,10 @@ export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleSe
 };
 
 
-export interface MtModulesServices extends ModulesServices<Service> {
-    default: MtModuleServices;
-}
-
-
-export class MtModulesServicesConfig extends ModulesServicesConfig<MtModulesServices, Service>{
-    modulesServices: {
-        default: ModuleServicesConfig<MtModuleServices, MtModuleServicesConfig>;
-    };
-}
-
-
-const base = 'mt-tilda-services';
-
-export const EVENTS = {
-    SERVICES_LOADED: `${base}/services-loaded`,
-    SERVICE_LOADED: (name: string) => `${base}/services-loaded/${name}`
-};
-
-
 export const loadServices = (config: MtModuleServicesConfig) => {
     const moduleConfig: MtModulesServicesConfig = {
         modulesServices: {
-            default: {
+            tildaGlobal: {
                 module: { loadServices: loadModuleServices },
                 config
             }
@@ -58,3 +38,5 @@ export const loadServices = (config: MtModuleServicesConfig) => {
 
     return load(moduleConfig);
 };
+
+export const webpackEntry = () => { }; // for webpack (to have an entry to load the file)

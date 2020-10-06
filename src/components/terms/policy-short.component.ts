@@ -1,10 +1,13 @@
+import { MtModulesServices, servicesPromise$ } from './../../services/global/services.module';
 import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
-import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/loading-animation-popup.service';
+import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/global/loading-animation-popup.service';
 import { Api } from '../../utils/api';
 // import { Popup } from '../../services/popup.service';
 // import { MT } from '../../typings/mt';
 import { buildTerm } from './build-term';
-import { services } from '../../services/services.module';
+import { services } from '../../services/global/services.module';
+// import { servicesPromise$ } from '../../services/global/load-services';
+// import { EVENTS } from '../../services/global/load-services.event';
 
 
 // declare const mt: MT; // for build-scripts-streams to compile (apparently running ts programatically does not understand global ambiant declaration)
@@ -50,21 +53,22 @@ export class PolicyShort {
         };
 
         $(window).ready(() => {
+            servicesPromise$().then(services => {
+                const linkToPopup = document.querySelector(`[href="${/* mt.Popup */services.tildaGlobal.popup.options.linkId}"]`);
+                linkToPopup.addEventListener('click', e => {
+                    e.preventDefault();
+                    services.tildaGlobal.popup.showPopup();
 
-            const linkToPopup = document.querySelector(`[href="${/* mt.Popup */services.popup.options.linkId}"]`);
-            linkToPopup.addEventListener('click', e => {
-                e.preventDefault();
-                services.popup.showPopup();
-
-                if (!this.mtTildaTermEl) {
-                    this.loadingAnimation.startLoadingAnimation({ delay: 500 });
-                    $.ajax(ajaxSettings);
-                } else {
-                    // every time the popup is closed, mtTildaTermEl is removed from the popup content
-                    // so it is detached and we have to re-init it (init is calling tilda t688_init)
-                    services.popup.append(this.mtTildaTermEl);
-                    this.mtTildaTermEl.init(true);
-                }
+                    if (!this.mtTildaTermEl) {
+                        this.loadingAnimation.startLoadingAnimation({ delay: 500 });
+                        $.ajax(ajaxSettings);
+                    } else {
+                        // every time the popup is closed, mtTildaTermEl is removed from the popup content
+                        // so it is detached and we have to re-init it (init is calling tilda t688_init)
+                        services.tildaGlobal.popup.append(this.mtTildaTermEl);
+                        this.mtTildaTermEl.init(true);
+                    }
+                });
             });
         });
     }

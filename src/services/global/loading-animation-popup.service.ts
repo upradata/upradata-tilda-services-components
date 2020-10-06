@@ -24,6 +24,8 @@ export class LoadingAnimationPopup {
 
     constructor(options?: Partial<LoadingAnimationPopupOptions>) {
         this.options = new LoadingAnimationPopupOptions(options);
+        this.loadingMessage = this.options.loadingMessage;
+        this.errorMessage = this.options.errorMessage;
         this.p = document.createElement('p');
         this.p.setAttribute('style', 'padding: 10%; text-align: center;');
     }
