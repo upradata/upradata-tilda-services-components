@@ -1,15 +1,18 @@
-import { Selector, querySelectorByPath } from '@upradata/tilda-tools/lib/src/i18n/import-text/import-text.common';
+import { stripIndents } from 'common-tags';
+import { querySelectorByPath } from '@upradata/tilda-tools/lib/src/i18n/import-text/import-text.common';
+import { /* Selector, */ TextData } from '@upradata/tilda-tools/lib/src/i18n/import-text/types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from './loading-animation-popup.service';
 import { Api } from '../../utils/api';
-import { isUndefined } from '@upradata/util/lib-esm';
+import { isUndefined } from '@upradata/util';
+
 // import { MT } from '../typings/mt';
 // import { Popup } from './popup.service';
 
 // declare const mt: MT; // for build-scripts-streams to compile (apparently running ts programatically does not understand global ambiant declaration)
 
-export class TextData extends Selector {
+/* export class TextData extends Selector {
     extra?: string;
-}
+} */
 
 
 export class LanguageServiceOptions {
@@ -42,6 +45,7 @@ export class LanguageService {
     private loadingAnimation: LoadingAnimationPopup;
     private domain: string;
     private loadingLang: string;
+    private defaultLangExtraNodes: { [ id: string ]: { parent: HTMLElement; nodes: { node: Node; row: TextData; }[]; }; } = {};
 
     constructor(options: LanguageServiceOptions) {
         this.options = new LanguageServiceOptions(options);
@@ -144,35 +148,35 @@ export class LanguageService {
             this.loadingAnimation.errorMessage = `<p>An error occured. We could not load the "${language.name}" translation of the website. Please, contact <a href="mailto:bug@upradata.com">bug@upradata.com</a> to help us fix the issue.</p>`;
 
             // reload the page (having the default language).
-            // No need to catch the text from the AppEngine service and populate the page
-            if (lang === defaultLanguage) {
+            // No need to catch the text from the server service and populate the page
+            /* if (lang === defaultLanguage) {
                 this.loadingAnimation.startLoadingAnimation({ delay: 500 }).then(() => {
                     localStorage.setItem('language', lang);
                     window.location.href = location.origin + location.pathname;
                 });
-            } else {
+            } else { */
 
-                const pageName = window.location.pathname.slice(1) || 'home'; // remove the head / (for pathname ==='' => 'home')
+            const pageName = window.location.pathname.slice(1) || 'home'; // remove the head / (for pathname ==='' => 'home')
 
-                if (includedPages.length > 0 && includedPages.indexOf(pageName) === -1) // we translate only the allowed pages
-                    return;
+            if (includedPages.length > 0 && includedPages.indexOf(pageName) === -1) // we translate only the allowed pages
+                return;
 
-                if (excludedPages.length > 0 && excludedPages.indexOf(pageName) !== -1) // we do not translate excluded pages
-                    return;
+            if (excludedPages.length > 0 && excludedPages.indexOf(pageName) !== -1) // we do not translate excluded pages
+                return;
 
-                if (pageName.endsWith('.html')) {
-                    const nameMatch = pageName.match(/-(.*)\.html/);
-                    const name = nameMatch ? nameMatch[ 1 ] : pageName.match(/(.*)\.html/)[ 1 ];
+            if (pageName.endsWith('.html')) {
+                const nameMatch = pageName.match(/-(.*)\.html/);
+                const name = nameMatch ? nameMatch[ 1 ] : pageName.match(/(.*)\.html/)[ 1 ];
 
-                    this.ajaxSettings.url = `${this.domain}${pageName}?page=${name}&lang=${lang}`;
-                } else
-                    this.ajaxSettings.url = `${this.domain}${pageName}-${lang}`;
+                this.ajaxSettings.url = `${this.domain}${pageName}?page=${name}&lang=${lang}`;
+            } else
+                this.ajaxSettings.url = `${this.domain}${pageName}-${lang}`;
 
 
-                this.loadingAnimation.startLoadingAnimation({ delay: 500 });
+            this.loadingAnimation.startLoadingAnimation({ delay: 500 });
 
-                $.ajax(this.ajaxSettings);
-            }
+            $.ajax(this.ajaxSettings);
+            // }
         } catch (e) {
             console.error(e);
             // https://michalzalecki.com/why-using-localStorage-directly-is-a-bad-idea/
@@ -180,7 +184,7 @@ export class LanguageService {
         }
     }
 
-    private updateText(el: Node, newText: string) {
+    private updateText(el: Node, newText: string, options?: string[]) {
         const oldText = el.textContent;
 
         const preWhiteSpaces = oldText.match(/^\s*/)[ 0 ];
@@ -188,7 +192,26 @@ export class LanguageService {
         if (newText.endsWith('\''))
             postWhiteSpaces = '';
 
-        el.textContent = `${preWhiteSpaces}${newText}${postWhiteSpaces}`;
+
+        const hasHeadSpace = options && (
+            options.some(o => o === 'head-space') ||
+            !options.some(o => o === 'no-head-space' || o === 'no-space')
+        );
+
+        const text = hasHeadSpace && newText[ 0 ] !== ' ' ? ` ${newText}` : newText;
+
+        el.textContent = `${preWhiteSpaces}${text}${postWhiteSpaces}`;
+    }
+
+    private getTextElement(node: Node) {
+        let n = node;
+
+        while (true) {
+            if (n === null || n.nodeType === Node.TEXT_NODE)
+                return n;
+
+            n = n.firstChild;
+        }
     }
 
     private onError(jqXHR: JQuery.jqXHR, textStatus: JQuery.Ajax.ErrorTextStatus, errorThrown: string) {
@@ -204,108 +227,213 @@ export class LanguageService {
             for (const row of textList) {
 
                 try {
-                    const el = querySelectorByPath(row);
+                    if (row.extra)
+                        rowsWithExtraField.push(row);
+                    else {
 
-                    if (el) {
-                        if (row.extra)
-                            rowsWithExtraField.push(row);
+                        const el = querySelectorByPath(row);
 
-                        this.updateText(el, row.text);
-
-                    } else
-                        console.warn('Could not find:', row);
-
+                        if (el)
+                            this.updateText(el, row.text);
+                        else
+                            console.error('Could not find:', row);
+                    }
                 } catch (e) {
-                    console.warn(e);
+                    console.error(e);
                 }
             }
 
 
             this.handleExtra(rowsWithExtraField);
-
-            const { activeLinkClass } = this.options;
-
-            const mobileAndDesktopActiveLinks = [ ...document.querySelectorAll(`.${activeLinkClass}`) ];
-            mobileAndDesktopActiveLinks.forEach(a => a.classList.remove(activeLinkClass));
-
-            const mobileAndDesktopLangLinks = this.langLinks.filter(a => a.textContent.trim().toLowerCase() === this.loadingLang);
-            mobileAndDesktopLangLinks.forEach(a => a.classList.add(activeLinkClass));
         }
         catch (e) {
-            this.loadingAnimation.onError();
+            // this.loadingAnimation.onError();
             console.error(e);
         }
+
+        const { activeLinkClass } = this.options;
+
+        const mobileAndDesktopActiveLinks = [ ...document.querySelectorAll(`.${activeLinkClass}`) ];
+        mobileAndDesktopActiveLinks.forEach(a => a.classList.remove(activeLinkClass));
+
+        const mobileAndDesktopLangLinks = this.langLinks.filter(a => a.textContent.trim().toLowerCase() === this.loadingLang);
+        mobileAndDesktopLangLinks.forEach(a => a.classList.add(activeLinkClass));
 
         this.loadingAnimation.stopLoadingAnimation();
         localStorage.setItem('language', this.loadingLang);
         this.loadingLang = undefined;
     }
 
-    private handleExtra(rowsWithExtraField: TextData[]) {
+    private rowToString(row: TextData) {
+        return `{ rootId: ${row.rootId}, path: ${row.path}, text: ${row.text} }`;
+    }
 
-        const nodesById: { [ id: string ]: Node[]; } = {};
+    private parseExtra(row: TextData): { id: string; position: number; options: string[]; } {
+        if (row.extra.startsWith('id')) {
+            // format id=0:2?opt1,opt2 => id=0 and location=2 and options: [opt1, opt2]
+            // for one "phrase", the children 0, 1, 2, ...,n can be shuffled.
+            // So it can be 0 => 2; 1 => 0; 2 => 1
+            // Thus, id=0:2; id=0:0; id=0:1 for phrase id=0
+            // location starts from 1 (not 0)
+            const locationAndOpts = row.extra.split('=')[ 1 ];
+            const [ id, rest ] = locationAndOpts.split(':');
+            const [ loc, opts ] = rest.split('?');
 
-        for (const row of rowsWithExtraField) {
-            if (row.extra.startsWith('id')) {
-                // format id=0:2 => id=0 and location=2
-                // for one "phrase", the children 0, 1, 2, ...,n can be shuffled.
-                // So it can be 0 => 2; 1 => 0; 2 => 1
-                // Thus, id=0:2; id=0:0; id=0:1 for phrase id=0
-                // location starts from 1 (not 0)
-                const location = row.extra.split('=')[ 1 ];
-                const [ id, loc ] = location.split(':');
-                const pos = parseFloat(loc);
+            const position = parseFloat(loc);
+            const options = opts ? opts.split(',') : [];
 
-                const node = querySelectorByPath(row);
-
-                if (!nodesById[ id ])
-                    nodesById[ id ] = [];
-
-                nodesById[ id ][ pos - 1 ] = node;
-            } else {
-                console.log(`Extra ${row.extra} not handled: ${row}`);
-            }
+            return { id, position, options };
         }
 
-        // we reconstruct the "phrase"
-        for (const [ id, nodes ] of Object.entries(nodesById)) {
-            let count = 0;
+        console.log(`Extra ${row.extra} not handled: ${this.rowToString(row)}`);
+        return undefined;
+    }
 
-            if (nodes.some(node => ++count && node === undefined)) {
-                console.warn(`Could not reconstruct i18n phrase with id: ${id}. At least one extra item returns undefined from querySelectorByPath`);
-                continue;
+    private handleExtra(rowsWithExtraField: TextData[]) {
+        const { defaultLanguage } = this.options;
+
+        const errors: string[] = [];
+
+        try {
+
+            this.regenerateDefaultLangExtraNodes();
+
+            if (this.loadingLang === defaultLanguage) {
+                this.defaultLangExtraNodes = {};
+                return;
             }
 
-            if (count !== nodes.length) {
-                console.warn(`Could not reconstruct i18n phrase with id: ${id}. It is missing positioned item(s).
-                There are ${count} positioned items for a maximum positioned item of ${nodes.length}`);
-                continue;
-            }
+            const nodesById: { [ id: string ]: { node: Node; row: TextData; }[]; } = {};
+            const computeDefaultExtraNodes = Object.values(this.defaultLangExtraNodes).length === 0;
 
-            const ancestor = this.commonAncestor(nodes);
-            const clones = [];
+            for (const row of rowsWithExtraField) {
+                try {
+                    const { id, position: pos } = this.parseExtra(row) || {};
 
-            for (const node of nodes) {
-                // we can have <div>111 <span><span>LALALA</span></span> 222</div>
+                    if (id) {
+                        const node = querySelectorByPath(row);
+                        if (!node)
+                            console.error('Could not find:', row);
 
-                if (ancestor === node.parentElement)
-                    clones.push(node.cloneNode(true));
-                else {
-                    let p = node.parentElement;
-                    for (; p.parentElement !== ancestor; p = p.parentElement) { }
-                    clones.push(p.cloneNode(true));
+
+                        if (!nodesById[ id ])
+                            nodesById[ id ] = [];
+
+                        nodesById[ id ][ pos - 1 ] = { row, node };
+
+                        if (computeDefaultExtraNodes) {
+                            // keep references to original node for regenerateDefaultLangExtraNodes
+                            const { id } = this.parseExtra(row);
+
+                            this.defaultLangExtraNodes[ id ] = this.defaultLangExtraNodes[ id ] || { parent: undefined, nodes: [] };
+                            this.defaultLangExtraNodes[ id ].nodes.push({ node, row }); // for default language, order is  always 1,2,3,4, ...
+                        }
+                    }
+                } catch (e) {
+                    errors.push(stripIndents`
+                                Error while searching node for row: ${row}
+                                ${e.message}
+                                with stack: ${e.stack || e}`);
                 }
             }
 
-            ancestor.innerHTML = '';
-            for (const clone of clones)
-                ancestor.appendChild(clone);
+            if (computeDefaultExtraNodes) {
+                // we retrieve the common ancestor needed in regenerateDefaultLangExtraNodes
+                for (const [ id, defaultLangNodeList ] of Object.entries(this.defaultLangExtraNodes)) {
+                    const ancestor = this.commonAncestor(nodesById[ id ].map(n => n.node));
+                    defaultLangNodeList.parent = ancestor;
+
+                    for (const [ i, { node, row } ] of Object.entries(defaultLangNodeList.nodes)) {
+                        if (!node)
+                            defaultLangNodeList.nodes = [];
+                        else {
+                            let n = node;
+                            for (; n.parentElement !== ancestor; n = n.parentElement) { }
+
+                            defaultLangNodeList.nodes[ i ] = { row, node: n.cloneNode(true) };
+                        }
+                    }
+                }
+            }
+
+
+            // we reconstruct the "phrase"
+            for (const [ id, nodes ] of Object.entries(nodesById)) {
+                let count = 0;
+
+                if (nodes.some(node => ++count && isUndefined(node.node))) {
+                    for (const { row } of nodes.filter(n => isUndefined(n.node))) {
+                        errors.push(stripIndents`
+                                    Could not reconstruct i18n phrase with id: ${id}.
+                                    row: ${this.rowToString(row)}
+                                    At least one extra item returns "undefined" from querySelectorByPath`);
+                    }
+
+                    continue;
+                }
+
+                // nodes can have holes like [undefined, node, node, undefined, node] (index i represents position)
+                // count is the number of not undefined node in the list
+                if (count !== nodes.length) {
+                    const rowsWithIndex = nodes.map((node, i) => `index [${i}]: ${this.rowToString(node.row)}`);
+
+                    errors.push(stripIndents`
+                                Could not reconstruct i18n phrase with id: ${id}. It is missing positioned item(s).
+                                There are ${count} positioned items and should be ${nodes.length}
+                                rows are: ${rowsWithIndex.join('\n')}`);
+
+                    continue;
+                }
+
+                nodes.forEach(n => {
+                    const { options } = this.parseExtra(n.row);
+                    this.updateText(n.node, n.row.text, options);
+                });
+
+                const ancestor = this.commonAncestor(nodes.map(n => n.node));
+                const clones = [];
+
+                for (const { node } of nodes) {
+                    // we can have <div>111 <span><span>LALALA</span></span> 222</div>
+
+                    if (ancestor === node.parentElement)
+                        clones.push(node.cloneNode(true));
+                    else {
+                        let p = node.parentElement;
+                        for (; p.parentElement !== ancestor; p = p.parentElement) { }
+                        clones.push(p.cloneNode(true));
+                    }
+                }
+
+                ancestor.innerHTML = '';
+                for (const clone of clones)
+                    ancestor.appendChild(clone);
+            }
+
+        } catch (e) {
+            console.error('Error while handling extra text', e);
+        }
+
+        errors.forEach(e => console.error(e));
+    }
+
+    private regenerateDefaultLangExtraNodes() {
+        // inject back the original extra nodes
+        // right after receiving new text to keep the order of the default language as a reference
+        // to rearrange the other languages extra afterwards
+
+        for (const defaultLangNodeList of Object.values(this.defaultLangExtraNodes)) {
+            defaultLangNodeList.parent.innerHTML = '';
+
+            for (const { node, row } of defaultLangNodeList.nodes) {
+                this.updateText(this.getTextElement(node), node.textContent, this.parseExtra(row).options);
+                defaultLangNodeList.parent.appendChild(node);
+            }
         }
     }
 
-
     private commonAncestor(textNodes: Node[]) {
-        let parent = { node: undefined, textContent: '' };
+        let parent = { node: undefined as HTMLElement, textContent: '' };
 
         for (const textNode of textNodes) {
             // get common parent

@@ -14,7 +14,7 @@
         "e2e": "npx jest --passWithNoTests --verbose false --config jest-e2e.config.js",
         "clean": "shx rm -rf lib lib-esm",
         "prebuild": "npm run clean",
-        "build": "tsc && tsc -m es6 --outDir lib-esm && build-bin.sh",
+        "build": "tsc && tsc -m es6 --outDir lib-esm",
         "webpack:dev": "webpack.build.sh --mode development",
         "webpack:dev:watch": "webpack.build.sh --mode development --watch",
         "webpack:prod": "webpack.build.sh --mode production",

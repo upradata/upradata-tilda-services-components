@@ -90,7 +90,7 @@ export class LoadingAnimationPopup {
         // this.options.popup.clear();
         services.popup.remove(this.p);
 
-        if (options.autoClose || this.options.autoClose)
+        if (options.autoClose || options.autoClose === undefined && this.options.autoClose)
             services.popup.closePopup();
     }
 
