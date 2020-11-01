@@ -1,6 +1,6 @@
 import { stripIndents } from 'common-tags';
-import { querySelectorByPath } from '@upradata/tilda-tools/lib/src/i18n/import-text/import-text.common';
-import { /* Selector, */ TextData } from '@upradata/tilda-tools/lib/src/i18n/import-text/types';
+import { querySelectorByPath } from '@upradata/tilda-tools/lib/i18n/import-text/import-text.common';
+import { /* Selector, */ TextData } from '@upradata/tilda-tools/lib/i18n/import-text/types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from './loading-animation-popup.service';
 import { Api } from '../../utils/api';
 import { isUndefined } from '@upradata/util';
@@ -27,6 +27,8 @@ export class LanguageServiceOptions {
     languages: { lang: string; name: string; }[];
     loadingAnimation?: Partial<LoadingAnimationPopupOptions>;
     activeLinkClass?: string = 'mt-lang-link-active';
+    disableLinkClass?: string = 'mt-lang-link-disable';
+
     // popup: Popup; // = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
 
     constructor(options: LanguageServiceOptions) {
@@ -85,15 +87,24 @@ export class LanguageService {
     }
 
     init() {
+        const { includedPages, excludedPages } = this.options;
+
+        if (
+            includedPages.length > 0 && includedPages.indexOf(this.pageName) === -1 || // we translate only the allowed pages
+            excludedPages.length > 0 && excludedPages.indexOf(this.pageName) !== -1 // we do not translate excluded pages
+        ) {
+            this.disable();
+            return;
+        }
+
         const savedLang = this.getSavedLang();
         const activeLang = savedLang ? savedLang.lang : this.options.defaultLanguage;
+
+        this.updateCssMenuLanguage();
 
         for (const a of this.langLinks) {
 
             const lang = a.textContent.trim().toLowerCase();
-
-            if (activeLang === lang)
-                a.classList.add(this.options.activeLinkClass);
 
             a.addEventListener('click', e => {
                 e.preventDefault();
@@ -103,7 +114,6 @@ export class LanguageService {
 
         // window.addEventListener('popstate', event => this.handleHashChange());
         // window.addEventListener('hashchange', event => this.handleHashChange(), false); on click
-
 
         if (location.hash)
             this.handleHashChange();
@@ -129,11 +139,14 @@ export class LanguageService {
         this.loadPage(lang);
     }
 
+    private get pageName() {
+        return window.location.pathname.slice(1) || 'home';
+    }
 
     private loadPage(lang: string) {
         try {
 
-            const { languages, defaultLanguage, includedPages, excludedPages } = this.options;
+            const { languages } = this.options;
 
             this.loadingLang = lang;
 
@@ -156,13 +169,7 @@ export class LanguageService {
                 });
             } else { */
 
-            const pageName = window.location.pathname.slice(1) || 'home'; // remove the head / (for pathname ==='' => 'home')
-
-            if (includedPages.length > 0 && includedPages.indexOf(pageName) === -1) // we translate only the allowed pages
-                return;
-
-            if (excludedPages.length > 0 && excludedPages.indexOf(pageName) !== -1) // we do not translate excluded pages
-                return;
+            const pageName = this.pageName;
 
             if (pageName.endsWith('.html')) {
                 const nameMatch = pageName.match(/-(.*)\.html/);
@@ -251,17 +258,34 @@ export class LanguageService {
             console.error(e);
         }
 
+        localStorage.setItem('language', this.loadingLang);
+        this.loadingLang = undefined;
+
+        this.updateCssMenuLanguage();
+    }
+
+    private updateCssMenuLanguage() {
         const { activeLinkClass } = this.options;
 
-        const mobileAndDesktopActiveLinks = [ ...document.querySelectorAll(`.${activeLinkClass}`) ];
-        mobileAndDesktopActiveLinks.forEach(a => a.classList.remove(activeLinkClass));
+        // const mobileAndDesktopActiveLinks = [ ...document.querySelectorAll(`.${activeLinkClass}`) ];
+        // mobileAndDesktopActiveLinks.forEach(a => a.classList.remove(activeLinkClass));
+        this.langLinks.forEach(a => a.classList.remove(activeLinkClass)); // enough
 
-        const mobileAndDesktopLangLinks = this.langLinks.filter(a => a.textContent.trim().toLowerCase() === this.loadingLang);
+        const mobileAndDesktopLangLinks = this.langLinks.filter(a => a.textContent.trim().toLowerCase() === this.getSavedLang().lang);
         mobileAndDesktopLangLinks.forEach(a => a.classList.add(activeLinkClass));
 
         this.loadingAnimation.stopLoadingAnimation();
-        localStorage.setItem('language', this.loadingLang);
-        this.loadingLang = undefined;
+    }
+
+    private disable() {
+        const { activeLinkClass, disableLinkClass } = this.options;
+
+        this.langLinks.forEach(a => a.classList.remove(activeLinkClass));
+
+        const mobileAndDesktopLangLinks = this.langLinks.filter(a => a.textContent.trim().toLowerCase() === this.getSavedLang().lang);
+        mobileAndDesktopLangLinks.forEach(a => a.classList.add(disableLinkClass));
+
+        this.langLinks.forEach(a => a.addEventListener('click', e => e.preventDefault()));
     }
 
     private rowToString(row: TextData) {

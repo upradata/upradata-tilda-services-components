@@ -9,6 +9,7 @@ export class PopupOptions {
 
     constructor(options: PopupOptions) {
         Object.assign(this, options);
+        this.recid.replace('^recrec', 'rec');
     }
 }
 
@@ -22,8 +23,18 @@ export class Popup {
 
     constructor(options: PopupOptions) {
         this.options = new PopupOptions(options);
-        $(window).ready(() => {
-            this.rec = $(`#rec${this.options.recid}`);
+        $(window).ready(() => this.init());
+        // document.addEventListener(this.recId, () => this.init());
+    }
+
+    get recId() {
+        return `rec${this.options.recid}`;
+    }
+
+    init() {
+        this.rec = $(`#${this.recId}`);
+
+        if (this.rec.get(0) && !this.popup) {
             this.popup = this.rec.find('.t-popup');
             this.popupContainer = this.rec.find('.t-popup__container');
 
@@ -38,7 +49,7 @@ export class Popup {
             document.body.insertAdjacentHTML('afterbegin', css); // fix mobile css that is overflowing the window
 
             this.customCodeHTML = t868__readCustomCode(this.rec);
-        });
+        }
     }
 
     append(element: HTMLElement) {

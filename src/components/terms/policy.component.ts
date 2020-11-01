@@ -1,4 +1,4 @@
-import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
+import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
 //  not obliged because of the global typing. But vscode needs to have the file open to not highlight an error :(
 // import { MT } from '../../typings/mt';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/global/loading-animation-popup.service';

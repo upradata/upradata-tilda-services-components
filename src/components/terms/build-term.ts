@@ -1,4 +1,4 @@
-import { Term, Type, SubSection, Alinea, Text as TextItem, Tag, Footer } from '@upradata/tilda-tools/lib/src/terms/terms.types';
+import { Term, Type, SubSection, Alinea, Text as TextItem, Tag, Footer } from '@upradata/tilda-tools/lib/terms/terms.types';
 import { Components as MtStencil } from '@upradata/stencil-components'; // needed in any case for HTMLMtBlogSubsectionElement an company
 
 

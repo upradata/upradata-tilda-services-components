@@ -1,5 +1,5 @@
 import { MtModulesServices, servicesPromise$ } from './../../services/global/services.module';
-import { Term } from '@upradata/tilda-tools/lib/src/terms/terms.types';
+import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/global/loading-animation-popup.service';
 import { Api } from '../../utils/api';
 // import { Popup } from '../../services/popup.service';
@@ -15,6 +15,7 @@ import { services } from '../../services/global/services.module';
 export class PolicyShortOptions {
     api: Api;
     loadingAnimation?: Partial<LoadingAnimationPopupOptions>;
+    popupLinkId: string;
 
     constructor(options: PolicyShortOptions) {
         this.api = new Api(options.api);
@@ -23,6 +24,8 @@ export class PolicyShortOptions {
             loadingMessage: `Loading "Privacy Policy". Be patient while the network is responding`,
             errorMessage: `An error occured. We could not load "Privacy Policy".`
         }, options.loadingAnimation, { autoShow: true, autoClose: false, });
+
+        this.popupLinkId = options.popupLinkId;
     }
 }
 
@@ -54,7 +57,13 @@ export class PolicyShort {
 
         $(window).ready(() => {
             servicesPromise$().then(services => {
-                const linkToPopup = document.querySelector(`[href="${/* mt.Popup */services.tildaGlobal.popup.options.linkId}"]`);
+                const linkToPopup = document.querySelector(`[href="${this.options.popupLinkId}"]`);
+
+                if (!linkToPopup) {
+                    console.error(`Cannot find the <a> link to open the short policy popup '[href="${this.options.popupLinkId}"]'`);
+                    return;
+                }
+
                 linkToPopup.addEventListener('click', e => {
                     e.preventDefault();
                     services.tildaGlobal.popup.showPopup();
