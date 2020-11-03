@@ -27,7 +27,7 @@
                 "--mode development ",
                 "--watch",
                 "--outputs",
-                " global",
+                "global",
                 "--ecmas",
                 "esm"
             ],

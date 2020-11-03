@@ -10,4 +10,6 @@ export * from './scroll-hash.service';
 import { webpackEntry } from './load-services';
 
 webpackEntry();
-console.log('CACAC');
+
+const event = new CustomEvent('mt/loaded', { detail: { what: 'load-services' } });
+document.dispatchEvent(event);

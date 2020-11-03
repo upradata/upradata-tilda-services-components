@@ -1,14 +1,14 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash;
 
 import fs from 'fs-extra';
 import path from 'path';
-import { promisify } from 'util';
-import webpackConfig, { Options } from './../webpack.config';
 // import { ParseArgs, CustomArgs } from '@upradata/node-util';
 import Yargs from 'yargs';
 import webpack from 'webpack';
 import { yellow, red, fromRoot, readFileAsync, writeFileAsync } from '@upradata/node-util';
+import { ensureArray } from '@upradata/util';
 import { MultiStats } from './webpack.multistats';
+import webpackConfig, { Options } from './webpack.config';
 
 
 if (process.argv[ 0 ].split('/').slice(-1)[ 0 ] === 'ts-node')
@@ -61,8 +61,14 @@ compile(options);
 function compile(options: Opts) {
     process.chdir(fromRoot());
 
-    const config = webpackConfig(options, options);
-    const compilers = webpack(config);
+    const configs = webpackConfig(options, options);
+
+    if (configs.length === 0) {
+        console.warn(yellow`No webpack config has been built woth the following options:`, options);
+        return;
+    }
+
+    const compilers = webpack(configs);
 
     // compilers.run(() => { });
     /* compilers.compilers.forEach(compiler => {
@@ -119,22 +125,23 @@ function addMtPrefix() {
 
     const outputDir = fromRoot('./bundle/global');
 
-    for (const outputType of [ 'tilda', 'tilda-global' ] as const) {
-        console.log(yellow`Adding 'var mt = mt || {} in ${outputDir}/{es5,esm}/${outputType}.{es5,esm}.js`);
+    // for (const outputType of [ 'tilda', 'tilda-global' ] as const) {
+    const ecmas = ensureArray(options.ecmas);
+    console.log(yellow`Adding 'var mt = mt || {} in ${outputDir}/{${ecmas.join(',')}}`);
 
-        for (const ecma of options.ecmas) {
-            // echo "var mt = window.mt || {};$(cat $outputdir/$ecma/$outputname.$ecma.js)" >$outputdir/$ecma/$outputname.$ecma.js
+    return Promise.all(ecmas.map(async ecma => {
 
-            const fileName = path.join(outputDir, ecma, `${outputType}.${ecma}.js`);
+        const outputPath = path.join(outputDir, ecma);
+        const files = await fs.readdir(outputPath, 'utf8');
 
-            promises.push(
-                readFileAsync(fileName, 'utf8').then(content => {
-                    const newContent = `var mt = window.mt || {};${content}`;
-                    return writeFileAsync(fileName, newContent, 'utf8');
-                })
-            );
-        }
-    }
+        await Promise.all(files.map(async file => {
+            console.log(`    --> ${file}`);
+            const fileName = path.join(outputPath, file);
 
-    return Promise.all(promises);
+            const content = await readFileAsync(fileName, 'utf8');
+            const newContent = `var mt = window.mt || {};${content}`;
+
+            return writeFileAsync(fileName, newContent, 'utf8');
+        }));
+    }));
 }

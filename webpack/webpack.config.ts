@@ -1,5 +1,5 @@
-import { babelE5Config } from './webpack/babel.config.es5';
-import { babelEsmConfig } from './webpack/babel.config.esm';
+import { babelE5Config } from './babel.config.es5';
+import { babelEsmConfig } from './babel.config.esm';
 import { fromRoot } from '@upradata/node-util';
 import { ensureArray } from '@upradata/util';
 import TerserPlugin from 'terser-webpack-plugin';

@@ -16,17 +16,19 @@ export const babelEsmConfig = {
             }
         ]
     ],
-    plugins: [
-        [
-            '@babel/plugin-transform-runtime',
-            {
-                absoluteRuntime: false,
-                corejs: false,
-                helpers: true,
-                regenerator: false,
-                useESModules: true,
-                version: '^7.11.5'
-            }
-        ]
-    ]
+    // read https://github.com/babel/babel/issues/9853#issuecomment-619587386 why
+    // We should not use useBuiltIns: 'usage' and corejs option on @babel/preset-env together with @babel/transform-runtime with core-js option set to false
+    /*  plugins: [
+         [
+             '@babel/plugin-transform-runtime',
+             {
+                 absoluteRuntime: false,
+                 corejs: false,
+                 helpers: true,
+                 regenerator: false,
+                 useESModules: true,
+                 version: '^7.11.5'
+             }
+         ]
+     ] */
 };

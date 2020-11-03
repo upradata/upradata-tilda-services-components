@@ -19,6 +19,7 @@
         "webpack:dev:watch": "ts-node webpack/webpack.build.ts --mode development --watch",
         "webpack:prod": "webpack/webpack.build.sh --mode production",
         "webpack:prod:watch": "webpack/webpack.build.sh --mode production --watch",
+        "webpack:dev:global:esm": "ts-node webpack/webpack.build.ts --mode development --outputs global --ecmas esm",
         "postbuild": "npm run test && npm run e2e",
         "watch": "concurrently 'tsc -w' 'tsc -w -m es6 --outDir lib-esm'",
         "build:only": "npm run prebuild && tsc && tsc -m es6 --outDir lib-esm",
