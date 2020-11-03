@@ -5,7 +5,7 @@ import { LanguageService } from './language.service';
 import { Popup } from './popup.service';
 import { loadScrollHashService } from './scroll-hash.service';
 import { loadIsMobileService } from './is-mobile.service';
-import { MtModuleServicesConfig, MtModuleServices, services, MtModulesServicesConfig } from './services.module';
+import { MtModuleServicesConfig, MtModuleServices, services, MtModulesServicesConfig, MtModulesServices } from './services.module';
 import { EVENTS } from './load-services.event';
 
 export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleServices, Service> = async servicesConfig => {
@@ -20,7 +20,7 @@ export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleSe
 };
 
 
-export const loadServices = (config: MtModuleServicesConfig) => {
+export const loadServices = (config: MtModuleServicesConfig): MtModulesServices => {
     const moduleConfig: MtModulesServicesConfig = {
         modulesServices: {
             tildaGlobal: {
@@ -36,7 +36,9 @@ export const loadServices = (config: MtModuleServicesConfig) => {
         serviceLoadedEventName: EVENTS.SERVICE_LOADED
     };
 
-    return load(moduleConfig);
+    return load(moduleConfig) as any as MtModulesServices;
 };
 
-export const webpackEntry = () => { }; // for webpack (to have an entry to load the file)
+export const webpackEntry = () => {
+    mt.loadServices = loadServices;
+}; // for webpack (to have an entry to load the file)

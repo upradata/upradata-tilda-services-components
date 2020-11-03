@@ -1,18 +1,30 @@
-import { babelE5Config } from './babel.config.es5';
-import { babelEsmConfig } from './babel.config.esm';
+import { babelE5Config } from './webpack/babel.config.es5';
+import { babelEsmConfig } from './webpack/babel.config.esm';
 import { fromRoot } from '@upradata/node-util';
+import { ensureArray } from '@upradata/util';
 import TerserPlugin from 'terser-webpack-plugin';
 import webpack from 'webpack';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
 
+export type Ecma = 'es5' | 'esm';
+export type OutputType = 'global' | 'lib';
+export type Mode = 'production' | 'development';
 
-export default function webpackConfig(env: object, argv: webpack.Configuration) {
+export interface Options {
+    ecmas: Ecma | Ecma[];
+    outputs: OutputType | OutputType[];
+    mode: Mode;
+}
 
-    const config: (options: { mode: 'production' | 'development', ecma: 'es5' | 'esm', output: 'global' | 'lib'; }) => webpack.Configuration = options => {
+export default function webpackConfig(options: Partial<Options> = {}, argv: webpack.Configuration) {
+
+    const config: (options: { mode: Mode, ecma: Ecma, output: OutputType; }) => webpack.Configuration = options => {
         const { mode, ecma, output } = options;
 
         return {
-            stats: 'verbose',
+            stats: {
+                all: true
+            }, // 'normal',
             mode,
             devtool: mode === 'development' ? 'eval-source-map' : 'source-map',
             /* output: {
@@ -60,10 +72,24 @@ export default function webpackConfig(env: object, argv: webpack.Configuration) 
                 // jquery: 'jQuery'
             },
             plugins: [
-                new CleanWebpackPlugin()
+                new CleanWebpackPlugin(/* { dangerouslyAllowCleanPatternsOutsideProject: true, dry: false } */),
+                // new webpack.debug.ProfilingPlugin()
+                new webpack.ProgressPlugin({
+                    activeModules: false,
+                    entries: true,
+                    /* handler(percentage, message, ...args) {
+                        // custom logic
+                    }, */
+                    modules: true,
+                    modulesCount: 5000,
+                    profile: false,
+                    dependencies: true,
+                    dependenciesCount: 10000,
+                    percentBy: null
+                })
             ],
             optimization: {
-                namedModules: true, // NamedModulesPlugin()
+                moduleIds: 'named', // NamedModulesPlugin()
                 // minimize: isDefined(minimize) ? minimize : options.mode === 'production',
                 runtimeChunk: {
                     name: 'webpack-runtime'
@@ -91,11 +117,10 @@ export default function webpackConfig(env: object, argv: webpack.Configuration) 
                 minimize: mode === 'production',
                 minimizer: [
                     new TerserPlugin({
-                        cache: true,
                         parallel: true,
-                        sourceMap: true, // Must be set to true if using source-maps in production
                         terserOptions: { // https://github.com/babel/preset-modules => preset-modules is enabled also with options { bugfixes: true} in @babel/preset-env
-                            ecma: 8, // to override compress and format's ecma options
+                            sourceMap: true, // Must be set to true if using source-maps in production
+                            ecma: 2017, // to override compress and format's ecma options
                             safari10: true // to work around Safari 10/11 bugs in loop scoping and await
                         }
                     }),
@@ -104,14 +129,11 @@ export default function webpackConfig(env: object, argv: webpack.Configuration) 
         };
     };
 
-    let mode = argv.mode || 'development';
-    mode = mode === 'none' ? 'development' : mode;
-
     const configs: webpack.Configuration[] = [];
 
-    for (const ecma of [ 'es5', 'esm' ] as const) {
-        for (const output of [ 'global', 'lib' ] as const)
-            configs.push(config({ mode, ecma, output }));
+    for (const ecma of ensureArray(options.ecmas)) {
+        for (const output of ensureArray(options.outputs))
+            configs.push(config({ mode: options.mode, ecma, output }));
     }
 
     return configs;
