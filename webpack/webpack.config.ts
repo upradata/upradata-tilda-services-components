@@ -63,7 +63,7 @@ export default function webpackConfig(options: Partial<Options> = {}, argv: webp
                     },
                     {
                         test: /\.m?js$/,
-                        exclude: /(node_modules|bower_components)/,
+                        exclude: /node_modules|bower_components|(Libraries\/Util)/,
                         use: { loader: 'babel-loader', options: ecma === 'es5' ? babelE5Config : babelEsmConfig }
                     }
                 ],
@@ -91,9 +91,9 @@ export default function webpackConfig(options: Partial<Options> = {}, argv: webp
             optimization: {
                 moduleIds: 'named', // NamedModulesPlugin()
                 // minimize: isDefined(minimize) ? minimize : options.mode === 'production',
-                runtimeChunk: {
-                    name: 'webpack-runtime'
-                },
+                /*  runtimeChunk: {
+                     name: 'webpack-runtime'
+                 }, */
                 splitChunks: {
                     cacheGroups: {
                         babel: {
