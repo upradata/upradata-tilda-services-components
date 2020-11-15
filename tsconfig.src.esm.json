@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "lib-esm",
+        "target": "ESNext",
+        "module": "ESNext"
+    },
+    "exclude": [
+        "node_modules",
+        "src/test.ts",
+        "src/**/*.spec.ts",
+        "src/**/bak/**",
+        "webpack"
+    ]
+}

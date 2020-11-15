@@ -1,0 +1,12 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "lib-webpack",
+        "target": "ESNext",
+        "module": "ESNext"
+    },
+    "exclude": [
+        "node_modules",
+        "src"
+    ]
+}

@@ -12,31 +12,28 @@
             "DOM",
             "DOM.Iterable"
         ],
-        "module": "CommonJS",
         "moduleResolution": "node",
         "sourceMap": true,
-        "target": "ESNext",
         "traceResolution": false,
-        "outDir": "lib",
         "baseUrl": "./",
         "paths": {
             "@root/*": [
                 "./*"
-            ],
+            ] /* ,
             "*": [
                 "./node_modules",
                 "./@types/*"
-            ] // https://github.com/microsoft/TypeScript/issues/13581#issuecomment-273923793
+            ] */ // https://github.com/microsoft/TypeScript/issues/13581#issuecomment-273923793
         }
     },
-    "include": [
-        "src"
+    "include": [ // FOR VSCODE
+        "src",
+        "webpack"
     ],
     "exclude": [
         "node_modules",
         "src/test.ts",
         "src/**/*.spec.ts",
         "src/**/bak/**",
-        "src/client"
     ]
 }

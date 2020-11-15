@@ -53,15 +53,17 @@ options.mode = options.mode || 'development';
 options.ecmas = options.ecmas || [ 'es5', 'esm' ];
 options.outputs = options.outputs || [ 'global', 'lib' ];
 
-compile(options);
+(async function run() {
+    compile(options);
+})();
 
 // });
 
 
-function compile(options: Opts) {
+async function compile(options: Opts) {
     process.chdir(fromRoot());
 
-    const configs = webpackConfig(options, options);
+    const configs = await webpackConfig(options, options);
 
     if (configs.length === 0) {
         console.warn(yellow`No webpack config has been built woth the following options:`, options);

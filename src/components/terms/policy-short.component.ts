@@ -6,89 +6,54 @@ import { Api } from '../../utils/api';
 // import { MT } from '../../typings/mt';
 import { buildTerm } from './build-term';
 import { services } from '../../services/global/services.module';
+import { TermComponent, TermComponentOptions } from './term';
 // import { servicesPromise$ } from '../../services/global/load-services';
 // import { EVENTS } from '../../services/global/load-services.event';
 
 
 // declare const mt: MT; // for build-scripts-streams to compile (apparently running ts programatically does not understand global ambiant declaration)
 
-export class PolicyShortOptions {
+export interface PolicyShortOptions extends TermComponentOptions {
     api: Api;
     loadingAnimation?: Partial<LoadingAnimationPopupOptions>;
     popupLinkId: string;
 
-    constructor(options: PolicyShortOptions) {
-        this.api = new Api(options.api);
-
-        this.loadingAnimation = Object.assign({
-            loadingMessage: `Loading "Privacy Policy". Be patient while the network is responding`,
-            errorMessage: `An error occured. We could not load "Privacy Policy".`
-        }, options.loadingAnimation, { autoShow: true, autoClose: false, });
-
-        this.popupLinkId = options.popupLinkId;
-    }
 }
 
-export class PolicyShort {
-    public options: PolicyShortOptions;
-    // private popup: Popup;
-    private loadingAnimation: LoadingAnimationPopup;
+export class PolicyShort extends TermComponent {
     private mtTildaTermEl: HTMLMtTildaTermElement = undefined;
+    public popupLinkId: string;
 
     constructor(options: PolicyShortOptions) {
-        this.options = new PolicyShortOptions(options);
+        super({ ...options, name: 'Privacy Policy' });
+    }
 
-        // const popup = document.querySelector('#rec108186637 .t-popup__container'); // popup on the client already
+    protected init() {
+        servicesPromise$().then(services => {
+            const linkToPopup = document.querySelector(`[href="${this.popupLinkId}"]`);
 
-        // this.popup = new mt.Popup({ recid: mt.Popup.globalPopupRecId });
-        this.loadingAnimation = new LoadingAnimationPopup(this.options.loadingAnimation);
+            if (!linkToPopup) {
+                console.error(`Cannot find the <a> link to open the short policy popup '[href="${this.popupLinkId}"]'`);
+                return;
+            }
 
-        const { api } = this.options;
-        const url = location.href.includes('192.168.0') || location.href.includes('localhost') ? `http://localhost:${api.devPort}/${api.url}` : `${api.domain}/${api.url}`;
+            linkToPopup.addEventListener('click', e => {
+                e.preventDefault();
+                services.tildaGlobal.popup.showPopup();
 
-        const ajaxSettings: JQuery.AjaxSettings = {
-            crossDomain: true,
-            url,
-            method: 'GET',
-            dataType: 'json',
-            success: (...args) => this.onSuccess.apply(this, args),
-            error: this.onError.bind(this)
-        };
-
-        $(window).ready(() => {
-            servicesPromise$().then(services => {
-                const linkToPopup = document.querySelector(`[href="${this.options.popupLinkId}"]`);
-
-                if (!linkToPopup) {
-                    console.error(`Cannot find the <a> link to open the short policy popup '[href="${this.options.popupLinkId}"]'`);
-                    return;
+                if (!this.mtTildaTermEl) {
+                    this.sendAjaxRequest();
+                } else {
+                    // every time the popup is closed, mtTildaTermEl is removed from the popup content
+                    // so it is detached and we have to re-init it (init is calling tilda t688_init)
+                    services.tildaGlobal.popup.append(this.mtTildaTermEl);
+                    this.mtTildaTermEl.init(true);
                 }
-
-                linkToPopup.addEventListener('click', e => {
-                    e.preventDefault();
-                    services.tildaGlobal.popup.showPopup();
-
-                    if (!this.mtTildaTermEl) {
-                        this.loadingAnimation.startLoadingAnimation({ delay: 500 });
-                        $.ajax(ajaxSettings);
-                    } else {
-                        // every time the popup is closed, mtTildaTermEl is removed from the popup content
-                        // so it is detached and we have to re-init it (init is calling tilda t688_init)
-                        services.tildaGlobal.popup.append(this.mtTildaTermEl);
-                        this.mtTildaTermEl.init(true);
-                    }
-                });
             });
         });
     }
 
-    private onError(jqXHR: JQuery.jqXHR, textStatus: JQuery.Ajax.ErrorTextStatus, errorThrown: string) {
-        this.loadingAnimation.onError();
-        console.error('Error occured: ', { textStatus, errorThrown });
-    }
-
-
-    private async onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
+    protected async onSuccess(term: Term, textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
         try {
             const { termElement, init } = buildTerm(term);
 
@@ -97,7 +62,7 @@ export class PolicyShort {
 
             services.popup.clear();
             services.popup.append(this.mtTildaTermEl);
-            init({ isPopup: true, noHeader: true }).then(() => termElement.init());
+            await init({ isPopup: true, noHeader: true }).then(() => termElement.init());
         } catch (e) {
             this.loadingAnimation.onError();
             console.error(e);

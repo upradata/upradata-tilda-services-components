@@ -1,10 +1,12 @@
-import { babelE5Config } from './babel.config.es5';
-import { babelEsmConfig } from './babel.config.esm';
-import { fromRoot } from '@upradata/node-util';
-import { ensureArray } from '@upradata/util';
-import TerserPlugin from 'terser-webpack-plugin';
+import fs from 'fs-extra';
+import path from 'path';
 import webpack from 'webpack';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
+import TerserPlugin from 'terser-webpack-plugin';
+import { fromRoot } from '@upradata/node-util';
+import { ensureArray } from '@upradata/util';
+import { babelE5Config } from './babel.config.es5';
+import { babelEsmConfig } from './babel.config.esm';
 
 export type Ecma = 'es5' | 'esm';
 export type OutputType = 'global' | 'lib';
@@ -16,7 +18,22 @@ export interface Options {
     mode: Mode;
 }
 
-export default function webpackConfig(options: Partial<Options> = {}, argv: webpack.Configuration) {
+const getComponentsEntry = async (fromDir: string): Promise<{ entry: string; path: string; }[]> => {
+    // const srcDir = fromRoot('src/components');
+
+    const files = await fs.readdir(fromDir, { withFileTypes: true });
+    const componentFiles = files.filter(file => file.isFile() && file.name.endsWith('.component.ts'));
+    const directories = files.filter(file => file.isDirectory());
+
+    const entries = componentFiles.map(file => ({ entry: file.name.replace(/\.component\.ts$/, ''), path: path.join(fromDir, file.name) }));
+    const nextEntries = await Promise.all(directories.map(dir => getComponentsEntry(path.join(fromDir, dir.name)))).then(entries => entries.flat());
+
+    return [ ...entries, ...nextEntries ];
+};
+
+export default async function webpackConfig(options: Partial<Options> = {}, argv: webpack.Configuration) {
+    const componentEntries = await getComponentsEntry(fromRoot('src/components'));
+    const componentEntriesWebpack = Object.fromEntries(componentEntries.map(({ entry, path }) => [ entry, path ]));
 
     const config: (options: { mode: Mode, ecma: Ecma, output: OutputType; }) => webpack.Configuration = options => {
         const { mode, ecma, output } = options;
@@ -34,7 +51,9 @@ export default function webpackConfig(options: Partial<Options> = {}, argv: webp
             context: fromRoot(),
             entry: {
                 tilda: fromRoot('src/index.ts'),
-                'tilda-global': fromRoot('src/services/global/index.ts')
+                'tilda-services': fromRoot('src/services/global/index.ts'),
+                'tilda-component': fromRoot('src/components/index.ts'),
+                ...componentEntriesWebpack
             },
             output: {
                 path: fromRoot('bundle', output, ecma),
@@ -58,7 +77,7 @@ export default function webpackConfig(options: Partial<Options> = {}, argv: webp
                         exclude: /node_modules/,
                         use: [
                             { loader: 'babel-loader', options: ecma === 'es5' ? babelE5Config : babelEsmConfig },
-                            { loader: 'ts-loader' }
+                            { loader: 'ts-loader', options: { configFile: fromRoot(`tsconfig.src.${ecma}.json`) } }
                         ].filter(e => !!e)
                     },
                     {
