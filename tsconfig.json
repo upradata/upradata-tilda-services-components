@@ -12,6 +12,7 @@
             "DOM",
             "DOM.Iterable"
         ],
+        "target": "ESNext",
         "moduleResolution": "node",
         "sourceMap": true,
         "traceResolution": false,
@@ -24,7 +25,11 @@
                 "./node_modules",
                 "./@types/*"
             ] */ // https://github.com/microsoft/TypeScript/issues/13581#issuecomment-273923793
-        }
+        },
+        "skipLibCheck": true,
+        "typeRoots": [
+            "node_modules/@types"
+        ]
     },
     "include": [ // FOR VSCODE
         "src",

@@ -8,27 +8,28 @@ import { loadIsMobileService } from './is-mobile.service';
 import { MtModuleServicesConfig, MtModuleServices, services, MtModulesServicesConfig, MtModulesServices } from './services.module';
 import { EVENTS } from './load-services.event';
 
-export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleServices, Service> = async servicesConfig => {
+export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleServices, Service> = servicesConfig => {
     loadIsMobileService();
     loadScrollHashService();
 
-    services.popup = new Popup(servicesConfig.popup);
-    services.loadingAnimationPopup = new LoadingAnimationPopup(servicesConfig.loadingAnimationPopup);
-    services.language = new LanguageService(servicesConfig.language);
-
-    return services;
+    return {
+        popup: new Popup(servicesConfig.popup),
+        loadingAnimationPopup: new LoadingAnimationPopup(servicesConfig.loadingAnimationPopup),
+        language: new LanguageService(servicesConfig.language)
+    };
 };
 
 
 export const loadServices = (config: MtModuleServicesConfig): MtModulesServices => {
-    const moduleConfig: MtModulesServicesConfig = {
+    const moduleConfig: Partial<MtModulesServicesConfig> = {
         modulesServices: {
-            tildaGlobal: {
+            tilda: {
                 module: { loadServices: loadModuleServices },
                 config
             }
         },
         windowGlobal: 'mt',
+        variable: services,
         include: undefined, // all
         exclude: undefined,
         dispatchEvents: true,
@@ -36,7 +37,8 @@ export const loadServices = (config: MtModuleServicesConfig): MtModulesServices 
         serviceLoadedEventName: EVENTS.SERVICE_LOADED
     };
 
-    return load(moduleConfig) as any as MtModulesServices;
+    const loadedServices = load(moduleConfig) as MtModulesServices;
+    return loadedServices;
 };
 
 export const webpackEntry = () => {

@@ -17,22 +17,35 @@
             ]
         },
         {
-            "name": "webpack",
+            "name": "webpack ts-node",
             "type": "node",
             "request": "launch",
             "args": [
                 "-r",
                 "ts-node/register",
                 "webpack/webpack.build.ts",
-                "--mode development ",
+                "--mode",
+                "development",
                 "--watch",
                 "--outputs",
                 "global",
                 "--ecmas",
                 "esm"
             ],
+            "sourceMaps": true,
+            "protocol": "auto"
+        },
+        {
+            "name": "webpack node",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/lib-webpack/webpack.build.js",
+            "args": [
+                "--mode",
+                "development"
+            ],
             "outFiles": [
-                "${workspaceFolder}/lib/**/*.js"
+                "${workspaceFolder}/lib-webpack/**/*.js"
             ],
             "sourceMaps": true,
             "protocol": "auto"

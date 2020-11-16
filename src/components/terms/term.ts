@@ -1,6 +1,7 @@
 import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from '../../services/global/loading-animation-popup.service';
 import { Api } from '../../utils/api';
+import { onAfterServicesLoaded } from '../../services/global/helpers';
 
 export type NamedOptions<T> = T & { name: string; };
 
@@ -40,11 +41,13 @@ export abstract class TermComponent {
             success: (...args) => this.onSuccess.apply(this, args),
             error: this.onError.bind(this)
         };
-
-        $(window).ready(() => this.init());
     }
 
-    protected abstract init(): void | Promise<void>;
+    protected init() {
+        onAfterServicesLoaded(() => this.doInit(), { waitForLoadEvent: true });
+    }
+
+    protected abstract doInit(): void | Promise<void>;
 
     protected sendAjaxRequest(ajaxSettings?: JQuery.AjaxSettings) {
         this.loadingAnimation.startLoadingAnimation({ delay: 500 });

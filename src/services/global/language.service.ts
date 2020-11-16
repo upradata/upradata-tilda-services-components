@@ -1,3 +1,4 @@
+import { onAfterServicesLoaded } from './helpers';
 import { stripIndents } from 'common-tags';
 import { querySelectorByPath } from '@upradata/tilda-tools/lib/i18n/import-text/import-text.common';
 import { /* Selector, */ TextData } from '@upradata/tilda-tools/lib/i18n/import-text/types';
@@ -71,13 +72,13 @@ export class LanguageService {
 
         this.options.defaultLanguage = defaultLanguage || this.langLinks[ 0 ].textContent.toLowerCase();
 
-        $(window).ready(() => {
+        onAfterServicesLoaded(() => {
             this.langLinksDesktop = document.querySelectorAll(selector.langLinksDesktop);
             this.langLinksMobile = document.querySelectorAll(selector.langLinksMobile);
 
             this.langLinks = [ ...this.langLinksDesktop, ...this.langLinksMobile ];
             this.init();
-        });
+        }, { waitForLoadEvent: true });
     }
 
     private getSavedLang() {

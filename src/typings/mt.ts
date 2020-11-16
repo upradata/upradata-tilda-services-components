@@ -15,7 +15,11 @@ import { MtModuleComponents } from '../components/components.module';
 // https://stackoverflow.com/questions/45099605/ambient-declaration-with-an-imported-type-in-typescript
 // declare global implies it is a global scope file and not a module
 
-export type MT = MtModuleServices & MtModuleComponents & { loadServices: (config: MtModuleServicesConfig) => MtModulesServices; };
+export type MT = { services: MtModulesServices; } & MtModuleComponents &
+{
+    loadServices: (config: MtModuleServicesConfig) => MtModulesServices;
+    loaded: boolean;
+};
 
 declare global {
     var mt: MT;

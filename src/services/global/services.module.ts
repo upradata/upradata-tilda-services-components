@@ -20,16 +20,16 @@ export class MtModuleServicesConfig {
 }
 
 
-export interface MtModulesServices extends ModulesServices<Service> {
-    tildaGlobal: MtModuleServices;
-}
+export type MtModulesServices /* extends ModulesServices<Service> */ = {
+    tilda: MtModuleServices;
+};
 
 
 export class MtModulesServicesConfig extends ModulesServicesConfig<MtModulesServices, Service>{
     modulesServices: {
-        tildaGlobal: ModuleServicesConfig<MtModuleServices, MtModuleServicesConfig>;
+        tilda: ModuleServicesConfig<MtModuleServices, MtModuleServicesConfig>;
     };
 }
 
-export const services: MtModuleServices = {} as any; // will be added by @upradata/browser-util/load-services in ./load-services.ts
+export const services: MtModulesServices = {} as any; // will be added by @upradata/browser-util/load-services in ./load-services.ts
 export const servicesPromise$ = () => servicesPromise<MtModulesServices>();

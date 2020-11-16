@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
 import webpack from 'webpack';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
@@ -7,6 +8,8 @@ import { fromRoot } from '@upradata/node-util';
 import { ensureArray } from '@upradata/util';
 import { babelE5Config } from './babel.config.es5';
 import { babelEsmConfig } from './babel.config.esm';
+import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
+import * as threadLoader from 'thread-loader';
 
 export type Ecma = 'es5' | 'esm';
 export type OutputType = 'global' | 'lib';
@@ -31,9 +34,28 @@ const getComponentsEntry = async (fromDir: string): Promise<{ entry: string; pat
     return [ ...entries, ...nextEntries ];
 };
 
+
 export default async function webpackConfig(options: Partial<Options> = {}, argv: webpack.Configuration) {
     const componentEntries = await getComponentsEntry(fromRoot('src/components'));
     const componentEntriesWebpack = Object.fromEntries(componentEntries.map(({ entry, path }) => [ entry, path ]));
+
+    /*  const threadLoaderOptions = {
+         // there should be 1 cpu for the fork-ts-checker-webpack-plugin
+         workers: os.cpus().length - 1,
+         poolTimeout: Infinity // set this to Infinity in watch mode - see https://github.com/webpack-contrib/thread-loader
+     };
+ 
+     threadLoader.warmup(
+         threadLoaderOptions,
+         // pool options, like passed to loader options
+         // must match loader options to boot the correct pool
+         [
+             // modules to load
+             // can be any module, i. e.
+             'babel-loader',
+             'ts-loader',
+         ]
+     ); */
 
     const config: (options: { mode: Mode, ecma: Ecma, output: OutputType; }) => webpack.Configuration = options => {
         const { mode, ecma, output } = options;
@@ -76,8 +98,19 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                         test: /\.tsx?$/,
                         exclude: /node_modules/,
                         use: [
+                            /*  {
+                                 loader: 'thread-loader',
+                                 options: threadLoaderOptions
+                             }, */
                             { loader: 'babel-loader', options: ecma === 'es5' ? babelE5Config : babelEsmConfig },
-                            { loader: 'ts-loader', options: { configFile: fromRoot(`tsconfig.src.${ecma}.json`) } }
+                            {
+                                loader: 'ts-loader',
+                                options: {
+                                    configFile: fromRoot(`tsconfig.src.${ecma}.json`),
+                                    // happyPackMode: true, // IMPORTANT! use happyPackMode mode to speed-up compilation and reduce errors reported to webpack
+                                    // transpileOnly: true // plugin ForkTsCheckerWebpackPlugin will run type checking in a different thread
+                                }
+                            }
                         ].filter(e => !!e)
                     },
                     {
@@ -91,7 +124,17 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                 // jquery: 'jQuery'
             },
             plugins: [
-                new CleanWebpackPlugin(/* { dangerouslyAllowCleanPatternsOutsideProject: true, dry: false } */),
+                /* new ForkTsCheckerWebpackPlugin({
+                    typescript: {
+                        diagnosticOptions: {
+                            semantic: true,
+                            syntactic: true
+                        },
+                        configFile: fromRoot(`tsconfig.src.${ecma}.json`),
+                        mode: 'write-tsbuildinfo'
+                    }
+                }), */
+                // new CleanWebpackPlugin(/* { dangerouslyAllowCleanPatternsOutsideProject: true, dry: false } */),
                 // new webpack.debug.ProfilingPlugin()
                 new webpack.ProgressPlugin({
                     activeModules: false,

@@ -1,6 +1,5 @@
-// import { Popup } from './popup.service';
 import { Function0 } from '@upradata/util';
-import { services } from './services.module';
+import { MT } from '../../typings/mt';
 
 export class LoadingAnimationPopupOptions {
     // popup: Popup; // = new Popup({ recid: Popup.globalPopupRecId });
@@ -60,7 +59,7 @@ export class LoadingAnimationPopup {
                 p.textContent = loadingText;
 
                 // this.options.popup.clear();
-                services.popup.append(p);
+                mt.services.tilda.popup.append(p);
 
                 let i = 0;
                 const len = loadingText.length;
@@ -77,7 +76,7 @@ export class LoadingAnimationPopup {
                 }, 500);
 
                 if (autoShow || this.options.autoShow)
-                    services.popup.showPopup();
+                    mt.services.tilda.popup.showPopup();
 
                 res();
             }, delay);
@@ -88,21 +87,21 @@ export class LoadingAnimationPopup {
         this.stopAnimation();
 
         // this.options.popup.clear();
-        services.popup.remove(this.p);
+        mt.services.tilda.popup.remove(this.p);
 
         if (options.autoClose || options.autoClose === undefined && this.options.autoClose)
-            services.popup.closePopup();
+            mt.services.tilda.popup.closePopup();
     }
 
     onError(errorMessage?: string) {
         this.stopLoadingAnimation();
-        services.popup.showPopup();
+        mt.services.tilda.popup.showPopup();
 
         const errorDiv = document.createElement('div');
         errorDiv.innerHTML = errorMessage || this.errorMessage;
         errorDiv.setAttribute('style', 'padding: 10%; text-align: center;');
 
-        services.popup.append(errorDiv);
+        mt.services.tilda.popup.append(errorDiv);
     }
 
 }

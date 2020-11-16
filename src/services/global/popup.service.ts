@@ -1,3 +1,5 @@
+import { onLoad } from './helpers';
+
 declare function t868__readCustomCode(rec: JQuery<HTMLElement>): string;
 declare function t868_setHeight(recid: string): void;
 declare function t868_resizePopup(recid: string): void;
@@ -23,8 +25,7 @@ export class Popup {
 
     constructor(options: PopupOptions) {
         this.options = new PopupOptions(options);
-        $(window).ready(() => this.init());
-        // document.addEventListener(this.recId, () => this.init());
+        onLoad(() => this.init());
     }
 
     get recId() {

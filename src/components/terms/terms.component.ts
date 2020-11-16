@@ -29,9 +29,10 @@ export class Terms extends TermComponent {
         }, options.popupMessages);
 
         window.addEventListener('popstate', event => this.handleHashChange());
+        this.init();
     }
 
-    protected init() {
+    protected doInit() {
         this.navButtons = Array.from(document.querySelectorAll(`${this.navId} .t-menu__link-item`));
         this.addEventListenerToButtonsOrLinks(this.navButtons);
 

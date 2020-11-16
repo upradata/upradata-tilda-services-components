@@ -91,7 +91,7 @@ async function compile(options: Opts) {
 }
 
 
-function compileDone(err: Error, stats: MultiStats) {
+async function compileDone(err: Error, stats: MultiStats) {
 
     const clean = (err?: any) => {
         if (err) {
@@ -119,11 +119,10 @@ function compileDone(err: Error, stats: MultiStats) {
     if (stats.hasWarnings())
         console.warn(yellow`${info.warnings}`);
 
-    return addMtPrefix();
+    await addMtPrefix();
 }
 
 function addMtPrefix() {
-    const promises: Promise<void>[] = [];
 
     const outputDir = fromRoot('./bundle/global');
 

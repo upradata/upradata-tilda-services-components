@@ -5,4 +5,5 @@ node_modules
 bower_components
 lib
 lib-esm
+lib-webpack
 bundle
