@@ -42,7 +42,11 @@
             "program": "${workspaceFolder}/lib-webpack/webpack.build.js",
             "args": [
                 "--mode",
-                "development"
+                "development",
+                "--outputs",
+                "global",
+                "--ecmas",
+                "esm"
             ],
             "outFiles": [
                 "${workspaceFolder}/lib-webpack/**/*.js"

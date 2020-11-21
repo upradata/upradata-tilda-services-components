@@ -24,8 +24,10 @@ export abstract class TermComponent {
 
         const loadingAnimationOptions = Object.assign({
             loadingMessage: `Loading "${options.name}". Be patient while the network is responding`,
-            errorMessage: `An error occured. We could not load "${options.name}".`
-        }, options.loadingAnimation, { autoShow: true, autoClose: true, });
+            errorMessage: `An error occured. We could not load "${options.name}".`,
+            autoShow: true,
+            autoClose: true
+        }, options.loadingAnimation);
 
         this.loadingAnimation = new LoadingAnimationPopup(loadingAnimationOptions);
 

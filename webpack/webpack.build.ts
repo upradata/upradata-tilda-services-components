@@ -5,8 +5,8 @@ import path from 'path';
 // import { ParseArgs, CustomArgs } from '@upradata/node-util';
 import Yargs from 'yargs';
 import webpack from 'webpack';
-import { yellow, red, fromRoot, readFileAsync, writeFileAsync } from '@upradata/node-util';
-import { ensureArray } from '@upradata/util';
+import { yellow, red, fromRoot, forEachFiles, ForEachFilesInCallback, ForEachFilesInOptions, green } from '@upradata/node-util';
+import { ensureArray, toObject } from '@upradata/util';
 import { MultiStats } from './webpack.multistats';
 import webpackConfig, { Options } from './webpack.config';
 
@@ -54,7 +54,7 @@ options.ecmas = options.ecmas || [ 'es5', 'esm' ];
 options.outputs = options.outputs || [ 'global', 'lib' ];
 
 (async function run() {
-    compile(options);
+     await compile(options);   
 })();
 
 // });
@@ -119,30 +119,61 @@ async function compileDone(err: Error, stats: MultiStats) {
     if (stats.hasWarnings())
         console.warn(yellow`${info.warnings}`);
 
+    await appendWebpackRuntimeToTildaService();
     await addMtPrefix();
+
+    console.log(green`Done!`);
 }
 
-function addMtPrefix() {
+async function addMtPrefix() {
+    console.log(yellow`Assing "var mt" to ${fromRoot('/bundle/global')}`);
 
+    return forEachFilesInOutput(async filepath => {
+        console.log(`Add mt:    --> ${filepath.split('/').slice(-3).join('/')}`);
+
+        const content = await fs.readFile(filepath, 'utf8');
+        const newContent = `var mt = window.mt || {};${content}`;
+
+        return fs.writeFile(filepath, newContent, 'utf8');
+    });
+}
+
+async function appendWebpackRuntimeToTildaService() {
+    console.log(yellow`Prepending webpack.runtime.js to tilda-services`);
+
+    return forEachFilesInOutput(async (filepath, dirent) => {
+
+        const dir = path.dirname(filepath);
+        const ecma = dir.split('/').slice(-1)[ 0 ];
+
+        const webpackRuntimeName = `webpack.runtime.${ecma}.js`;
+        console.assert(webpackRuntimeName === dirent.name);
+
+        // 'rs' bypasses the system local file cache https://nodejs.org/api/fs.html#fs_file_system_flags
+        // we need it to write just after inside the same file
+        const files = toObject(
+            await Promise.all(([
+                { name: 'runtime', path: path.join(dir, path.basename(filepath)) },
+                { name: 'services', path: path.join(dir, `tilda-services.${ecma}.js`) }
+            ] as const).map(async file => ({ ...file, content: file.name === 'runtime' ? await fs.readFile(file.path, 'utf8') : '' }))),
+            'name');
+
+        console.log(green`--> Prepending to ${path.relative(fromRoot(), files.services.path)}`);
+        return fs.appendFile(files.services.path, files.runtime.content, { encoding: 'utf8' } );
+
+    }, { filter: dirent => dirent.name.includes('runtime') });
+}
+
+
+async function forEachFilesInOutput(callback: ForEachFilesInCallback, opts: { filter?: ForEachFilesInOptions[ 'filter' ]; } = {}) {
     const outputDir = fromRoot('./bundle/global');
+    const { filter = dirent => true } = opts;
 
-    // for (const outputType of [ 'tilda', 'tilda-global' ] as const) {
     const ecmas = ensureArray(options.ecmas);
-    console.log(yellow`Adding 'var mt = mt || {} in ${outputDir}/{${ecmas.join(',')}}`);
+    const outputPaths = ecmas.map(ecma => path.join(outputDir, ecma));
 
-    return Promise.all(ecmas.map(async ecma => {
-
-        const outputPath = path.join(outputDir, ecma);
-        const files = await fs.readdir(outputPath, 'utf8');
-
-        await Promise.all(files.map(async file => {
-            console.log(`    --> ${file}`);
-            const fileName = path.join(outputPath, file);
-
-            const content = await readFileAsync(fileName, 'utf8');
-            const newContent = `var mt = window.mt || {};${content}`;
-
-            return writeFileAsync(fileName, newContent, 'utf8');
-        }));
-    }));
+    return forEachFiles(outputDir, {
+        recursive: true,
+        filter: (dirent, filepath) => outputPaths.some(p => filepath.includes(p) && filter(dirent, filepath))
+    }, callback);
 }

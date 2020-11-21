@@ -1,10 +1,11 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import webpack from 'webpack';
+import webpack, { Entry } from 'webpack';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import { fromRoot } from '@upradata/node-util';
+import { EntryDescription, EntryObject } from '@upradata/node-util/lib-esm/@types/webpack';
 import { ensureArray } from '@upradata/util';
 import { babelE5Config } from './babel.config.es5';
 import { babelEsmConfig } from './babel.config.esm';
@@ -37,7 +38,25 @@ const getComponentsEntry = async (fromDir: string): Promise<{ entry: string; pat
 
 export default async function webpackConfig(options: Partial<Options> = {}, argv: webpack.Configuration) {
     const componentEntries = await getComponentsEntry(fromRoot('src/components'));
-    const componentEntriesWebpack = Object.fromEntries(componentEntries.map(({ entry, path }) => [ entry, path ]));
+    const componentEntriesWebpack: Record<string, EntryDescription> = Object.fromEntries(componentEntries.map(({ entry, path }) => [ entry, { import: path } ]));
+
+    Object.values(componentEntriesWebpack as any as Record<string, EntryDescription>).forEach(v => v.dependOn = [ 'tilda-services' ]);
+
+    const entryObject: Record<string, EntryDescription> = {
+        tilda: {
+            import: fromRoot('src/index.ts')
+        },
+        'tilda-services': {
+            import: fromRoot('src/services/global/index.ts'),
+        },
+        'tilda-components': {
+            import: fromRoot('src/components/index.ts'),
+            dependOn: [ 'tilda-services' ]
+        },
+        ...componentEntriesWebpack
+    };
+
+    Object.values(entryObject).filter(v => !v.dependOn).forEach(v => v.runtime = 'webpack.runtime');
 
     /*  const threadLoaderOptions = {
          // there should be 1 cpu for the fork-ts-checker-webpack-plugin
@@ -57,26 +76,23 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
          ]
      ); */
 
+
     const config: (options: { mode: Mode, ecma: Ecma, output: OutputType; }) => webpack.Configuration = options => {
         const { mode, ecma, output } = options;
+
 
         return {
             stats: {
                 all: true
             }, // 'normal',
             mode,
-            devtool: mode === 'development' ? 'eval-source-map' : 'source-map',
+            devtool: false, // mode === 'development' ? 'eval-source-map' : 'source-map',
             /* output: {
                 filename: '[name].[chunkhash].bundle.js',
                 path: '.', // path.resolve(__dirname, 'dist')
             }, */
             context: fromRoot(),
-            entry: {
-                tilda: fromRoot('src/index.ts'),
-                'tilda-services': fromRoot('src/services/global/index.ts'),
-                'tilda-component': fromRoot('src/components/index.ts'),
-                ...componentEntriesWebpack
-            },
+            entry: entryObject as webpack.Entry,
             output: {
                 path: fromRoot('bundle', output, ecma),
                 filename: `[name].${ecma}.js`,
@@ -90,7 +106,7 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
             resolve: {
                 mainFields: [ 'module', 'main', 'browser' ],
                 extensions: [ '.ts', '.tsx', '.js', '.jsx' ],
-                symlinks: true
+                symlinks: true,
             },
             module: {
                 rules: [
@@ -150,21 +166,47 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                     percentBy: null
                 })
             ],
+            cache: {
+                // 1. Set cache type to filesystem
+                type: 'filesystem',
+
+                buildDependencies: {
+                    // 2. Add your config as buildDependency to get cache invalidation on config change
+                    config: [ __filename ]
+
+                    // 3. If you have other things the build depends on you can add them here
+                    // Note that webpack, loaders and all modules referenced from your config are automatically added
+                }
+            },
             optimization: {
                 moduleIds: 'named', // NamedModulesPlugin()
                 // minimize: isDefined(minimize) ? minimize : options.mode === 'production',
-                /*  runtimeChunk: {
-                     name: 'webpack-runtime'
-                 }, */
+                /* runtimeChunk: {
+                    name: 'webpack-runtime',
+                }, */
                 splitChunks: {
                     cacheGroups: {
+                        /* tildaServices: {
+                            test: /src\/services\/global/,
+                            name: 'tilda-services',
+                            chunks: 'all',
+                            enforce: true,
+                            priority: 10,
+                        }, */
+                        /*  tildaComponents: {
+                             test: /src\/components/,
+                             name: 'tilda-components',
+                             chunks: 'all',
+                             enforce: true,
+                             priority: 10,
+                         }, */
                         babel: {
                             test: /node_modules\/(@babel|core-js|regenerator-runtime|webpack)/,
                             name: 'babel-polyfills',
                             chunks: 'all',
                             enforce: true,
                             minSize: 20000,
-                            priority: 2
+                            priority: 2,
                         },
                         vendor: {
                             test: /node_modules/,
@@ -172,7 +214,7 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                             chunks: 'all',
                             enforce: true,
                             minSize: 20000,
-                            priority: 1
+                            priority: 1,
                         }
                     }
                 },
@@ -199,4 +241,4 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
     }
 
     return configs;
-}
+};

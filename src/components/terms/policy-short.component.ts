@@ -1,6 +1,4 @@
 import { Term } from '@upradata/tilda-tools/lib/terms/terms.types';
-import { LoadingAnimationPopupOptions } from '../../services/global/loading-animation-popup.service';
-import { Api } from '../../utils/api';
 import { MT } from '../../typings/mt';
 import { buildTerm } from './build-term';
 import { TermComponent, TermComponentOptions } from './term';
@@ -16,7 +14,7 @@ export class PolicyShort extends TermComponent {
     public popupLinkId: string;
 
     constructor(options: PolicyShortOptions) {
-        super({ ...options, name: 'Privacy Policy' });
+        super({ ...options, loadingAnimation: { autoClose: false }, name: 'Privacy Policy' });
         this.popupLinkId = options.popupLinkId;
         this.init();
     }
