@@ -63,7 +63,7 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
          workers: os.cpus().length - 1,
          poolTimeout: Infinity // set this to Infinity in watch mode - see https://github.com/webpack-contrib/thread-loader
      };
- 
+
      threadLoader.warmup(
          threadLoaderOptions,
          // pool options, like passed to loader options
@@ -184,6 +184,8 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                 /* runtimeChunk: {
                     name: 'webpack-runtime',
                 }, */
+                usedExports: true, // default but to be sure -> Tells webpack to determine used exports for each module.
+                sideEffects: true, // default also -> Tells webpack to recognise the sideEffects flag in package.json
                 splitChunks: {
                     cacheGroups: {
                         /* tildaServices: {
@@ -225,7 +227,10 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                         terserOptions: { // https://github.com/babel/preset-modules => preset-modules is enabled also with options { bugfixes: true} in @babel/preset-env
                             sourceMap: true, // Must be set to true if using source-maps in production
                             ecma: 2017, // to override compress and format's ecma options
-                            safari10: true // to work around Safari 10/11 bugs in loop scoping and await
+                            safari10: true, // to work around Safari 10/11 bugs in loop scoping and await
+                            format: {
+                                indent_level: 0
+                            }
                         }
                     }),
                 ],
@@ -241,4 +246,4 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
     }
 
     return configs;
-};
+}

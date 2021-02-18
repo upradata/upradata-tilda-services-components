@@ -54,7 +54,7 @@ options.ecmas = options.ecmas || [ 'es5', 'esm' ];
 options.outputs = options.outputs || [ 'global', 'lib' ];
 
 (async function run() {
-     await compile(options);   
+    await compile(options);
 })();
 
 // });
@@ -95,8 +95,8 @@ async function compileDone(err: Error, stats: MultiStats) {
 
     const clean = (err?: any) => {
         if (err) {
-            console.error(red`${err.stack}`);
-            console.error(red`${err.details || err}`);
+            console.error(err.stack);
+            console.error(err.details || err);
         }
     };
 
@@ -159,7 +159,7 @@ async function appendWebpackRuntimeToTildaService() {
             'name');
 
         console.log(green`--> Prepending to ${path.relative(fromRoot(), files.services.path)}`);
-        return fs.appendFile(files.services.path, files.runtime.content, { encoding: 'utf8' } );
+        return fs.appendFile(files.services.path, files.runtime.content, { encoding: 'utf8' });
 
     }, { filter: dirent => dirent.name.includes('runtime') });
 }

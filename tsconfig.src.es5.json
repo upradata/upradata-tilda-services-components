@@ -3,7 +3,7 @@
     "compilerOptions": {
         "outDir": "lib",
         "target": "ES5",
-        "module": "CommonJS"
+        "module": "ESNext"
     },
     "exclude": [
         "node_modules",

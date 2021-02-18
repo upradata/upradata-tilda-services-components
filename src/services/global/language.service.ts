@@ -1,10 +1,11 @@
 import { onAfterServicesLoaded } from './helpers';
 import { stripIndents } from 'common-tags';
-import { querySelectorByPath } from '@upradata/tilda-tools/lib/i18n/import-text/import-text.common';
-import { /* Selector, */ TextData } from '@upradata/tilda-tools/lib/i18n/import-text/types';
+import { /* Selector, */ TextData } from '@upradata/tilda-tools/lib/i18n/types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from './loading-animation-popup.service';
 import { Api } from '../../utils/api';
-import { isUndefined } from '@upradata/util';
+import { NodeTextData, nodeTextDataListById, reconstructPhrase, commonParent, rewindBelowNode, } from '@upradata/tilda-tools/lib/i18n/text-data-extra';
+import { applyOptionsToText, getText, UpdateDataReturn, updateText, updateTextData } from '@upradata/tilda-tools/lib/i18n/text-data';
+
 
 // import { MT } from '../typings/mt';
 // import { Popup } from './popup.service';
@@ -14,6 +15,11 @@ import { isUndefined } from '@upradata/util';
 /* export class TextData extends Selector {
     extra?: string;
 } */
+
+const rowToString = (row: TextData) => {
+    return `{ rootId: ${row.rootId}, path: ${row.path}, text: ${row.text} }`;
+};
+
 
 
 export class LanguageServiceOptions {
@@ -38,6 +44,12 @@ export class LanguageServiceOptions {
     }
 }
 
+type DefaultLangExtraNodes = {
+    [ id: string ]: {
+        parent: HTMLElement;
+        nodeTextDataList: NodeTextData[];
+    };
+};
 
 export class LanguageService {
     public options: LanguageServiceOptions;
@@ -48,7 +60,7 @@ export class LanguageService {
     private loadingAnimation: LoadingAnimationPopup;
     private domain: string;
     private loadingLang: string;
-    private defaultLangExtraNodes: { [ id: string ]: { parent: HTMLElement; nodes: { node: Node; row: TextData; }[]; }; } = {};
+    private defaultLangExtraNodes: DefaultLangExtraNodes = {};
 
     constructor(options: LanguageServiceOptions) {
         this.options = new LanguageServiceOptions(options);
@@ -192,67 +204,17 @@ export class LanguageService {
         }
     }
 
-    private updateText(el: Node, newText: string, options?: string[]) {
-        const oldText = el.textContent;
-
-        const preWhiteSpaces = oldText.match(/^\s*/)[ 0 ];
-        let postWhiteSpaces = oldText.match(/\s*$/)[ 0 ];
-        if (newText.endsWith('\''))
-            postWhiteSpaces = '';
-
-
-        const hasHeadSpace = options && (
-            options.some(o => o === 'head-space') ||
-            !options.some(o => o === 'no-head-space' || o === 'no-space')
-        );
-
-        const text = hasHeadSpace && newText[ 0 ] !== ' ' ? ` ${newText}` : newText;
-
-        el.textContent = `${preWhiteSpaces}${text}${postWhiteSpaces}`;
-    }
-
-    private getTextElement(node: Node) {
-        let n = node;
-
-        while (true) {
-            if (n === null || n.nodeType === Node.TEXT_NODE)
-                return n;
-
-            n = n.firstChild;
-        }
-    }
 
     private onError(jqXHR: JQuery.jqXHR, textStatus: JQuery.Ajax.ErrorTextStatus, errorThrown: string) {
         this.loadingAnimation.onError();
         console.error('Error occured: ', { textStatus, errorThrown });
     }
 
-
-    private onSuccess(textList: TextData[], textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
-        const rowsWithExtraField: TextData[] = [];
+    private async onSuccess(textList: TextData[], textStatus: JQuery.Ajax.SuccessTextStatus, jqXHR: JQuery.jqXHR) {
 
         try {
-            for (const row of textList) {
-
-                try {
-                    if (row.extra)
-                        rowsWithExtraField.push(row);
-                    else {
-
-                        const el = querySelectorByPath(row);
-
-                        if (el)
-                            this.updateText(el, row.text);
-                        else
-                            console.error('Could not find:', row);
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            }
-
-
-            this.handleExtra(rowsWithExtraField);
+            const rowsWithExtraField = await this.updateTextData(textList);
+            await this.updateTextDataExtra(rowsWithExtraField);
         }
         catch (e) {
             // this.loadingAnimation.onError();
@@ -263,6 +225,106 @@ export class LanguageService {
         this.loadingLang = undefined;
 
         this.updateCssMenuLanguage();
+    }
+
+
+    private async updateTextData(textList: TextData[]) {
+        const rowsWithExtraField: TextData[] = [];
+
+        const updateTextContent = (textEl: Text, textData: TextData): UpdateDataReturn => {
+            const { error } = updateText(textEl, getText(textData));
+
+            if (error)
+                return { code: 'error', error: new Error(error) };
+
+            return { code: 'success' };
+        };
+
+        const update = async (textData: TextData) => {
+            if (textData.extra)
+                rowsWithExtraField.push(textData);
+
+            return updateTextData(textData, { updateText: updateTextContent }).then(({ code, error }) => {
+                switch (code) {
+                    case 'success': break;
+                    case 'not-changed': break;
+                    case 'error': console.error(textData, error); break;
+                }
+            }).catch(e => console.error(textData, e instanceof Error ? e : new Error(e)));
+        };
+
+
+        await Promise.all(textList.map(update));
+
+        return rowsWithExtraField;
+    }
+
+    private updateTextDataExtra(rowsWithExtraField: TextData[]): Promise<void> {
+        const { defaultLanguage } = this.options;
+
+
+        try {
+
+            this.regenerateDefaultLangExtraNodes();
+
+            if (this.loadingLang === defaultLanguage) {
+                this.defaultLangExtraNodes = {};
+                return;
+            }
+
+            const computeDefaultExtraNodes = Object.values(this.defaultLangExtraNodes).length === 0;
+
+
+            const onError = (row: TextData, error: Error) => {
+                console.error(`Problem getting extra TextData Dom nodes: ${rowToString(row)}`);
+                console.error(error.message, error.stack);
+            };
+
+            const nodesTextDataById = nodeTextDataListById(rowsWithExtraField, { onError });
+
+            if (computeDefaultExtraNodes) {
+                // keep references to original node for regenerateDefaultLangExtraNodes
+                // for default language, order is  always 1,2,3,4, ...
+
+                this.defaultLangExtraNodes = Object.entries(nodesTextDataById).reduce((defaultLangExtraNodes, [ id, nodeTextDataList ]) => {
+                    // we retrieve the common ancestor needed in regenerateDefaultLangExtraNodes
+                    const nodes = nodeTextDataList.map(data => data.node);
+                    const ancestor = commonParent(nodes);
+
+                    const clones = nodeTextDataList.map(({ textData, node, options }) => ({
+                        textData,
+                        options,
+                        node: rewindBelowNode(node, ancestor).cloneNode(true) as HTMLElement
+                    }));
+
+                    defaultLangExtraNodes[ id ] = { nodeTextDataList: clones, parent: ancestor };
+                    return defaultLangExtraNodes;
+
+                }, {} as DefaultLangExtraNodes);
+            }
+
+
+            return reconstructPhrase(nodesTextDataById, { onError }).then(() => { });
+
+        } catch (e) {
+            console.error('Error while handling extra text', e);
+        }
+    }
+
+    private regenerateDefaultLangExtraNodes() {
+        // inject back the original extra nodes
+        // right after receiving new text to keep the order of the default language as a reference
+        // to rearrange the other languages extra afterwards
+
+        for (const defaultLangNodeList of Object.values(this.defaultLangExtraNodes)) {
+            defaultLangNodeList.parent.innerHTML = '';
+
+            for (const { node, textData, options } of defaultLangNodeList.nodeTextDataList) {
+                updateText(node, applyOptionsToText(textData.text, options));
+                // updateText(this.getTextElement(node), node.textContent, options);
+                defaultLangNodeList.parent.appendChild(node);
+            }
+        }
     }
 
     private updateCssMenuLanguage() {
@@ -287,188 +349,5 @@ export class LanguageService {
         mobileAndDesktopLangLinks.forEach(a => a.classList.add(disableLinkClass));
 
         this.langLinks.forEach(a => a.addEventListener('click', e => e.preventDefault()));
-    }
-
-    private rowToString(row: TextData) {
-        return `{ rootId: ${row.rootId}, path: ${row.path}, text: ${row.text} }`;
-    }
-
-    private parseExtra(row: TextData): { id: string; position: number; options: string[]; } {
-        if (row.extra.startsWith('id')) {
-            // format id=0:2?opt1,opt2 => id=0 and location=2 and options: [opt1, opt2]
-            // for one "phrase", the children 0, 1, 2, ...,n can be shuffled.
-            // So it can be 0 => 2; 1 => 0; 2 => 1
-            // Thus, id=0:2; id=0:0; id=0:1 for phrase id=0
-            // location starts from 1 (not 0)
-            const locationAndOpts = row.extra.split('=')[ 1 ];
-            const [ id, rest ] = locationAndOpts.split(':');
-            const [ loc, opts ] = rest.split('?');
-
-            const position = parseFloat(loc);
-            const options = opts ? opts.split(',') : [];
-
-            return { id, position, options };
-        }
-
-        console.log(`Extra ${row.extra} not handled: ${this.rowToString(row)}`);
-        return undefined;
-    }
-
-    private handleExtra(rowsWithExtraField: TextData[]) {
-        const { defaultLanguage } = this.options;
-
-        const errors: string[] = [];
-
-        try {
-
-            this.regenerateDefaultLangExtraNodes();
-
-            if (this.loadingLang === defaultLanguage) {
-                this.defaultLangExtraNodes = {};
-                return;
-            }
-
-            const nodesById: { [ id: string ]: { node: Node; row: TextData; }[]; } = {};
-            const computeDefaultExtraNodes = Object.values(this.defaultLangExtraNodes).length === 0;
-
-            for (const row of rowsWithExtraField) {
-                try {
-                    const { id, position: pos } = this.parseExtra(row) || {};
-
-                    if (id) {
-                        const node = querySelectorByPath(row);
-                        if (!node)
-                            console.error('Could not find:', row);
-
-
-                        if (!nodesById[ id ])
-                            nodesById[ id ] = [];
-
-                        nodesById[ id ][ pos - 1 ] = { row, node };
-
-                        if (computeDefaultExtraNodes) {
-                            // keep references to original node for regenerateDefaultLangExtraNodes
-                            const { id } = this.parseExtra(row);
-
-                            this.defaultLangExtraNodes[ id ] = this.defaultLangExtraNodes[ id ] || { parent: undefined, nodes: [] };
-                            this.defaultLangExtraNodes[ id ].nodes.push({ node, row }); // for default language, order is  always 1,2,3,4, ...
-                        }
-                    }
-                } catch (e) {
-                    errors.push(stripIndents`
-                                Error while searching node for row: ${row}
-                                ${e.message}
-                                with stack: ${e.stack || e}`);
-                }
-            }
-
-            if (computeDefaultExtraNodes) {
-                // we retrieve the common ancestor needed in regenerateDefaultLangExtraNodes
-                for (const [ id, defaultLangNodeList ] of Object.entries(this.defaultLangExtraNodes)) {
-                    const ancestor = this.commonAncestor(nodesById[ id ].map(n => n.node));
-                    defaultLangNodeList.parent = ancestor;
-
-                    for (const [ i, { node, row } ] of Object.entries(defaultLangNodeList.nodes)) {
-                        if (!node)
-                            defaultLangNodeList.nodes = [];
-                        else {
-                            let n = node;
-                            for (; n.parentElement !== ancestor; n = n.parentElement) { }
-
-                            defaultLangNodeList.nodes[ i ] = { row, node: n.cloneNode(true) };
-                        }
-                    }
-                }
-            }
-
-
-            // we reconstruct the "phrase"
-            for (const [ id, nodes ] of Object.entries(nodesById)) {
-                let count = 0;
-
-                if (nodes.some(node => ++count && isUndefined(node.node))) {
-                    for (const { row } of nodes.filter(n => isUndefined(n.node))) {
-                        errors.push(stripIndents`
-                                    Could not reconstruct i18n phrase with id: ${id}.
-                                    row: ${this.rowToString(row)}
-                                    At least one extra item returns "undefined" from querySelectorByPath`);
-                    }
-
-                    continue;
-                }
-
-                // nodes can have holes like [undefined, node, node, undefined, node] (index i represents position)
-                // count is the number of not undefined node in the list
-                if (count !== nodes.length) {
-                    const rowsWithIndex = nodes.map((node, i) => `index [${i}]: ${this.rowToString(node.row)}`);
-
-                    errors.push(stripIndents`
-                                Could not reconstruct i18n phrase with id: ${id}. It is missing positioned item(s).
-                                There are ${count} positioned items and should be ${nodes.length}
-                                rows are: ${rowsWithIndex.join('\n')}`);
-
-                    continue;
-                }
-
-                nodes.forEach(n => {
-                    const { options } = this.parseExtra(n.row);
-                    this.updateText(n.node, n.row.text, options);
-                });
-
-                const ancestor = this.commonAncestor(nodes.map(n => n.node));
-                const clones = [];
-
-                for (const { node } of nodes) {
-                    // we can have <div>111 <span><span>LALALA</span></span> 222</div>
-
-                    if (ancestor === node.parentElement)
-                        clones.push(node.cloneNode(true));
-                    else {
-                        let p = node.parentElement;
-                        for (; p.parentElement !== ancestor; p = p.parentElement) { }
-                        clones.push(p.cloneNode(true));
-                    }
-                }
-
-                ancestor.innerHTML = '';
-                for (const clone of clones)
-                    ancestor.appendChild(clone);
-            }
-
-        } catch (e) {
-            console.error('Error while handling extra text', e);
-        }
-
-        errors.forEach(e => console.error(e));
-    }
-
-    private regenerateDefaultLangExtraNodes() {
-        // inject back the original extra nodes
-        // right after receiving new text to keep the order of the default language as a reference
-        // to rearrange the other languages extra afterwards
-
-        for (const defaultLangNodeList of Object.values(this.defaultLangExtraNodes)) {
-            defaultLangNodeList.parent.innerHTML = '';
-
-            for (const { node, row } of defaultLangNodeList.nodes) {
-                this.updateText(this.getTextElement(node), node.textContent, this.parseExtra(row).options);
-                defaultLangNodeList.parent.appendChild(node);
-            }
-        }
-    }
-
-    private commonAncestor(textNodes: Node[]) {
-        let parent = { node: undefined as HTMLElement, textContent: '' };
-
-        for (const textNode of textNodes) {
-            // get common parent
-            const nodeParent = textNode.parentElement;
-            const textContent = nodeParent.textContent;
-
-            if (textContent.includes(parent.textContent) && textContent.length > parent.textContent.length)
-                parent = { node: nodeParent, textContent };
-        }
-
-        return parent.node;
     }
 }

@@ -37,7 +37,7 @@ export class LoadingAnimationPopup {
     startLoadingAnimation(options: { loadingMessage?: string; delay?: number; autoShow?: boolean; } = {}) {
         const { loadingMessage, delay = 0, autoShow } = options;
 
-        return new Promise((res, rej) => {
+        return new Promise<void>((res, rej) => {
             let startTimeoutId: number = undefined;
             let loadingTextIntervalId: number = undefined;
 
