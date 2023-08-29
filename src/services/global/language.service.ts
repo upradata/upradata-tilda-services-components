@@ -1,10 +1,9 @@
+import type { TextData } from '@upradata/tilda-tools/lib/src/i18n/text-data/types';
+import { NodeTextData, textDataExtra } from '@upradata/tilda-tools/lib/src/i18n/text-data/text-data-extra';
+import { UpdateDataReturn, textData } from '@upradata/tilda-tools/lib/src/i18n/text-data/text-data';
 import { onAfterServicesLoaded } from './helpers';
-import { stripIndents } from 'common-tags';
-import { /* Selector, */ TextData } from '@upradata/tilda-tools/lib/i18n/types';
 import { LoadingAnimationPopup, LoadingAnimationPopupOptions } from './loading-animation-popup.service';
 import { Api } from '../../utils/api';
-import { NodeTextData, nodeTextDataListById, reconstructPhrase, commonParent, rewindBelowNode, } from '@upradata/tilda-tools/lib/i18n/text-data-extra';
-import { applyOptionsToText, getText, UpdateDataReturn, updateText, updateTextData } from '@upradata/tilda-tools/lib/i18n/text-data';
 
 
 // import { MT } from '../typings/mt';
@@ -15,6 +14,10 @@ import { applyOptionsToText, getText, UpdateDataReturn, updateText, updateTextDa
 /* export class TextData extends Selector {
     extra?: string;
 } */
+
+const t = textData({ dom: window });
+const te = textDataExtra({ dom: window });
+
 
 const rowToString = (row: TextData) => {
     return `{ rootId: ${row.rootId}, path: ${row.path}, text: ${row.text} }`;
@@ -232,7 +235,7 @@ export class LanguageService {
         const rowsWithExtraField: TextData[] = [];
 
         const updateTextContent = (textEl: Text, textData: TextData): UpdateDataReturn => {
-            const { error } = updateText(textEl, getText(textData));
+            const { error } = t.updateText(textEl, t.getText(textData));
 
             if (error)
                 return { code: 'error', error: new Error(error) };
@@ -244,7 +247,7 @@ export class LanguageService {
             if (textData.extra)
                 rowsWithExtraField.push(textData);
 
-            return updateTextData(textData, { updateText: updateTextContent }).then(({ code, error }) => {
+            return t.updateTextData(textData, { updateText: updateTextContent }).then(({ code, error }) => {
                 switch (code) {
                     case 'success': break;
                     case 'not-changed': break;
@@ -280,7 +283,7 @@ export class LanguageService {
                 console.error(error.message, error.stack);
             };
 
-            const nodesTextDataById = nodeTextDataListById(rowsWithExtraField, { onError });
+            const nodesTextDataById = te.nodeTextDataListById(rowsWithExtraField, { onError });
 
             if (computeDefaultExtraNodes) {
                 // keep references to original node for regenerateDefaultLangExtraNodes
@@ -289,12 +292,12 @@ export class LanguageService {
                 this.defaultLangExtraNodes = Object.entries(nodesTextDataById).reduce((defaultLangExtraNodes, [ id, nodeTextDataList ]) => {
                     // we retrieve the common ancestor needed in regenerateDefaultLangExtraNodes
                     const nodes = nodeTextDataList.map(data => data.node);
-                    const ancestor = commonParent(nodes);
+                    const ancestor = te.commonParent(nodes);
 
                     const clones = nodeTextDataList.map(({ textData, node, options }) => ({
                         textData,
                         options,
-                        node: rewindBelowNode(node, ancestor).cloneNode(true) as HTMLElement
+                        node: te.rewindBelowNode(node, ancestor).cloneNode(true) as HTMLElement
                     }));
 
                     defaultLangExtraNodes[ id ] = { nodeTextDataList: clones, parent: ancestor };
@@ -304,7 +307,7 @@ export class LanguageService {
             }
 
 
-            return reconstructPhrase(nodesTextDataById, { onError }).then(() => { });
+            return te.reconstructPhrase(nodesTextDataById, { onError }).then(() => { });
 
         } catch (e) {
             console.error('Error while handling extra text', e);
@@ -320,7 +323,7 @@ export class LanguageService {
             defaultLangNodeList.parent.innerHTML = '';
 
             for (const { node, textData, options } of defaultLangNodeList.nodeTextDataList) {
-                updateText(node, applyOptionsToText(textData.text, options));
+                t.updateText(node, t.applyOptionsToText(textData.text, options));
                 // updateText(this.getTextElement(node), node.textContent, options);
                 defaultLangNodeList.parent.appendChild(node);
             }

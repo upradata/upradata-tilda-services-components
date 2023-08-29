@@ -1,4 +1,6 @@
-export const babelEsmConfig = {
+import type { TransformOptions as BabelOptions } from '@babel/core';
+
+export const babelEsmConfig: BabelOptions = {
     ignore: [
         '**/core-js /**/*'
     ],

@@ -1,14 +1,13 @@
-import { LoadServices, loadServices as load } from '@upradata/browser-util';
-import { Service } from './types';
+import { LoadServices, loadServices as load, ModulesServicesConfig } from '@upradata/browser-util';
 import { LoadingAnimationPopup } from './loading-animation-popup.service';
 import { LanguageService } from './language.service';
 import { Popup } from './popup.service';
 import { loadScrollHashService } from './scroll-hash.service';
 import { loadIsMobileService } from './is-mobile.service';
-import { MtModuleServicesConfig, MtModuleServices, services, MtModulesServicesConfig, MtModulesServices } from './services.module';
+import { MtModulesServicesConfig, MtModuleServices, services, MtModulesServices, MtTildaModuleServicesOpts } from './services.module';
 import { EVENTS } from './load-services.event';
 
-export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleServices, Service> = servicesConfig => {
+export const loadModuleServices: LoadServices<MtTildaModuleServicesOpts, MtModuleServices> = servicesConfig => {
     loadIsMobileService();
     loadScrollHashService();
 
@@ -20,9 +19,9 @@ export const loadModuleServices: LoadServices<MtModuleServicesConfig, MtModuleSe
 };
 
 
-export const loadServices = (config: MtModuleServicesConfig): MtModulesServices => {
-    const moduleConfig: Partial<MtModulesServicesConfig> = {
-        modulesServices: {
+export const loadServices = (config: MtTildaModuleServicesOpts): MtModulesServices => {
+    const moduleConfig: MtModulesServicesConfig = {
+        config: {
             tilda: {
                 module: { loadServices: loadModuleServices },
                 config

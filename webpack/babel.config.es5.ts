@@ -1,4 +1,6 @@
-export const babelE5Config = {
+import type { TransformOptions as BabelOptions } from '@babel/core';
+
+export const babelE5Config: BabelOptions = {
     ignore: [
         '**/core-js /**/*'
     ],

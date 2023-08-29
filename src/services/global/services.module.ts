@@ -1,35 +1,42 @@
 
-import { ModuleServices, ModulesServicesConfig, ModuleServicesConfig, ModulesServices, servicesPromise$ as servicesPromise } from '@upradata/browser-util';
+import { ModuleServices, ModulesServicesConfig, ModulesServicesConfOptions, servicesLoaded$, ModulesServices } from '@upradata/browser-util';
 import { Service } from './types';
 import { LoadingAnimationPopupOptions, LoadingAnimationPopup } from './loading-animation-popup.service';
 import { LanguageService, LanguageServiceOptions } from './language.service';
 import { Popup, PopupOptions } from './popup.service';
 
 
-export interface MtModuleServices extends ModuleServices<Service> {
+export type MtModuleServices = ModuleServices<Service, {
     popup: Popup;
     loadingAnimationPopup: LoadingAnimationPopup;
     language: LanguageService;
-}
+}>;
 
 
-export class MtModuleServicesConfig {
+export interface MtTildaModuleServicesOpts {
     popup: PopupOptions;
     loadingAnimationPopup: Partial<LoadingAnimationPopupOptions>;
     language: LanguageServiceOptions;
 }
 
 
-export type MtModulesServices /* extends ModulesServices<Service> */ = {
+
+export type MtModulesServices = ModulesServices<{
     tilda: MtModuleServices;
+}>;
+
+
+export type MtModulesServicesOpts = {
+    tilda?: MtTildaModuleServicesOpts;
 };
 
+export type MtModulesServicesConfigOptions = ModulesServicesConfOptions<MtModulesServices, MtModulesServicesOpts>;
 
-export class MtModulesServicesConfig extends ModulesServicesConfig<MtModulesServices, Service>{
-    modulesServices: {
-        tilda: ModuleServicesConfig<MtModuleServices, MtModuleServicesConfig>;
-    };
-}
+export type MtModulesServicesConfig = ModulesServicesConfig<MtModulesServices, MtModulesServicesConfigOptions>;
+
+
+
+
 
 export const services: MtModulesServices = {} as any; // will be added by @upradata/browser-util/load-services in ./load-services.ts
-export const servicesPromise$ = () => servicesPromise<MtModulesServices>();
+export const servicesPromise$ = () => servicesLoaded$<MtModulesServices>();

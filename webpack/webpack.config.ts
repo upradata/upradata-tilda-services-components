@@ -7,6 +7,7 @@ import TerserPlugin from 'terser-webpack-plugin';
 import { fromRoot } from '@upradata/node-util';
 import { EntryDescription, EntryObject } from '@upradata/node-util/lib-esm/@types/webpack';
 import { ensureArray } from '@upradata/util';
+import type { TransformOptions as BabelOptions } from '@babel/core';
 import { babelE5Config } from './babel.config.es5';
 import { babelEsmConfig } from './babel.config.esm';
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
@@ -21,6 +22,7 @@ export interface Options {
     outputs: OutputType | OutputType[];
     mode: Mode;
 }
+
 
 const getComponentsEntry = async (fromDir: string): Promise<{ entry: string; path: string; }[]> => {
     // const srcDir = fromRoot('src/components');
@@ -118,7 +120,7 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                                  loader: 'thread-loader',
                                  options: threadLoaderOptions
                              }, */
-                            { loader: 'babel-loader', options: ecma === 'es5' ? babelE5Config : babelEsmConfig },
+                            { loader: 'babel-loader', options: (ecma === 'es5' ? babelE5Config : babelEsmConfig) as BabelOptions },
                             {
                                 loader: 'ts-loader',
                                 options: {
@@ -132,7 +134,7 @@ export default async function webpackConfig(options: Partial<Options> = {}, argv
                     {
                         test: /\.m?js$/,
                         exclude: /node_modules|bower_components|(Libraries\/Util)/,
-                        use: { loader: 'babel-loader', options: ecma === 'es5' ? babelE5Config : babelEsmConfig }
+                        use: { loader: 'babel-loader', options: (ecma === 'es5' ? babelE5Config : babelEsmConfig) as BabelOptions }
                     }
                 ],
             },

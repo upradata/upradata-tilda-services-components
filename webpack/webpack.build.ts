@@ -5,10 +5,10 @@ import path from 'path';
 // import { ParseArgs, CustomArgs } from '@upradata/node-util';
 import Yargs from 'yargs';
 import webpack from 'webpack';
-import { yellow, red, fromRoot, forEachFiles, ForEachFilesInCallback, ForEachFilesInOptions, green } from '@upradata/node-util';
+import { yellow, red, fromRoot, forEachFiles, ForEachFilesInCallback, ForEachFilesOptions, green } from '@upradata/node-util';
 import { ensureArray, toObject } from '@upradata/util';
 import { MultiStats } from './webpack.multistats';
-import webpackConfig, { Options } from './webpack.config';
+import webpackConfig, { Ecma, Options } from './webpack.config';
 
 
 if (process.argv[ 0 ].split('/').slice(-1)[ 0 ] === 'ts-node')
@@ -66,7 +66,7 @@ async function compile(options: Opts) {
     const configs = await webpackConfig(options, options);
 
     if (configs.length === 0) {
-        console.warn(yellow`No webpack config has been built woth the following options:`, options);
+        console.warn(yellow`No webpack config has been built with the following options:`, options);
         return;
     }
 
@@ -84,6 +84,7 @@ async function compile(options: Opts) {
             callback();
         });
     }); */
+
     if (options.watch)
         compilers.watch({ aggregateTimeout: 100 }, compileDone);
     else
@@ -141,13 +142,13 @@ async function addMtPrefix() {
 async function appendWebpackRuntimeToTildaService() {
     console.log(yellow`Prepending webpack.runtime.js to tilda-services`);
 
-    return forEachFilesInOutput(async (filepath, dirent) => {
+    return forEachFilesInOutput(async (filepath, fileDirent) => {
 
         const dir = path.dirname(filepath);
         const ecma = dir.split('/').slice(-1)[ 0 ];
 
         const webpackRuntimeName = `webpack.runtime.${ecma}.js`;
-        console.assert(webpackRuntimeName === dirent.name);
+        console.assert(webpackRuntimeName === fileDirent.name);
 
         // 'rs' bypasses the system local file cache https://nodejs.org/api/fs.html#fs_file_system_flags
         // we need it to write just after inside the same file
@@ -161,19 +162,19 @@ async function appendWebpackRuntimeToTildaService() {
         console.log(green`--> Prepending to ${path.relative(fromRoot(), files.services.path)}`);
         return fs.appendFile(files.services.path, files.runtime.content, { encoding: 'utf8' });
 
-    }, { filter: dirent => dirent.name.includes('runtime') });
+    }, { filterFiles: (filepath, _dir) => filepath.includes('runtime') });
 }
 
 
-async function forEachFilesInOutput(callback: ForEachFilesInCallback, opts: { filter?: ForEachFilesInOptions[ 'filter' ]; } = {}) {
+async function forEachFilesInOutput(callback: ForEachFilesInCallback, opts: { filterFiles?: ForEachFilesOptions[ 'filterFiles' ]; } = {}) {
     const outputDir = fromRoot('./bundle/global');
-    const { filter = dirent => true } = opts;
+    const { filterFiles = _ => true } = opts;
 
-    const ecmas = ensureArray(options.ecmas);
+    const ecmas = ensureArray(options.ecmas) as Ecma[];
     const outputPaths = ecmas.map(ecma => path.join(outputDir, ecma));
 
     return forEachFiles(outputDir, {
         recursive: true,
-        filter: (dirent, filepath) => outputPaths.some(p => filepath.includes(p) && filter(dirent, filepath))
+        filterFiles: (filepath, dir) => outputPaths.some(p => filepath.includes(p) && filterFiles(filepath, dir))
     }, callback);
 }
